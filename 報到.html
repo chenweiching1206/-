@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>師傅報到系統</title>
+  <style>
+    body { margin:0; font-family: Arial,"Microsoft JhengHei",sans-serif; background:#f3f4f6; padding:20px; }
+    .app { max-width: 900px; margin: 0 auto; background:#fff; border-radius:16px; box-shadow:0 10px 24px rgba(0,0,0,.08); padding:20px; }
+    h1 { margin:0 0 10px; text-align:center; color:#1e40af; }
+    .tabs { display:flex; gap:10px; margin-bottom:20px; flex-wrap: wrap; }
+    .tabs button { border:none; padding:12px 20px; border-radius:8px; background:#e5e7eb; cursor:pointer; font-weight:700; font-size:16px; }
+    .tabs button.active { background:#2563eb; color:#fff; }
+    .page { display:none; }
+    .page.active { display:block; }
+    .grid { display:grid; gap:12px; }
+    @media (min-width: 700px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+    label { font-weight:700; display:block; margin-bottom:6px; }
+    input, select, textarea { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-size:16px; }
+    .btns { display:flex; gap:15px; flex-wrap: wrap; margin-top:20px; }
+    .btn { border:none; border-radius:8px; color:#fff; padding:12px 24px; font-weight:700; cursor:pointer; font-size:18px; }
+    .btn.in { background:#2563eb; padding:28px 40px; font-size:30px; min-width:280px; }
+    .btn.out { background:#0f766e; padding:28px 40px; font-size:30px; min-width:280px; }
+    .status { margin-top:15px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:12px; white-space: pre-wrap; font-size:15px; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    th, td { border:1px solid #e5e7eb; padding:10px; text-align:left; }
+    th { background:#f3f4f6; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>師傅報到系統</h1>
+    <div class="tabs">
+      <button class="active" data-page="checkin">1. 報到</button>
+      <button data-page="working">2. 上班中</button>
+      <button data-page="expense">3. 雜支/餐費計算</button>
+    </div>
+
+    <!-- 1. 報到 -->
+    <section id="checkin" class="page active">
+      <div class="grid two">
+        <div>
+          <label for="employeeSelect">師傅姓名</label>
+          <select id="employeeSelect"></select>
+        </div>
+        <div>
+          <label for="siteSelect">案場名稱</label>
+          <select id="siteSelect"></select>
+        </div>
+      </div>
+      <div class="grid" style="margin-top:12px;">
+        <div>
+          <label for="note">備註</label>
+          <input id="note" placeholder="可不填" />
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn in" id="btnIn">上班報到</button>
+        <button class="btn out" id="btnOut">下班報到</button>
+      </div>
+      <pre class="status" id="checkinStatus">等待操作...</pre>
+    </section>
+
+    <!-- 2. 上班中 -->
+    <section id="working" class="page">
+      <button style="background:#374151; color:white; padding:10px 20px;" id="btnRefreshWorking">重新整理</button>
+      <table>
+        <thead><tr><th>師傅</th><th>案場</th><th>上班時間</th><th>下班時間</th><th>備註</th></tr></thead>
+        <tbody id="workingBody"></tbody>
+      </table>
+    </section>
+
+    <!-- 3. 雜支/餐費計算 -->
+    <section id="expense" class="page">
+      <div class="grid two">
+        <div><label for="expenseDate">日期</label><input id="expenseDate" type="date" /></div>
+        <div><label for="expenseEmployee">師傅姓名</label><select id="expenseEmployee"></select></div>
+      </div>
+      <div class="grid" style="margin-top:12px;">
+        <div><label for="expenseSite">案場名稱</label><select id="expenseSite"></select></div>
+      </div>
+      <div class="grid two" style="margin-top:15px;">
+        <div><label for="misc">雜支</label><input id="misc" type="number" value="0" /></div>
+        <div><label for="meal">餐費</label><input id="meal" type="number" value="0" /></div>
+      </div>
+      <div class="grid two" style="margin-top:12px;">
+        <div><label for="water">涼水</label><input id="water" type="number" value="0" /></div>
+        <div><label for="expenseNote">備註</label><input id="expenseNote" /></div>
+      </div>
+      <div class="btns">
+        <button class="btn in" id="btnExpense">送出單日計算</button>
+      </div>
+      <pre class="status" id="expenseStatus">等待操作...</pre>
+    </section>
+  </div>
+
+<script>
+// ==================== 前端 JS ====================
+const tabs = document.querySelectorAll('.tabs button');
+const pages = document.querySelectorAll('.page');
+
+tabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('active'));
+    pages.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.page).classList.add('active');
+  });
+});
+
+async function loadMeta() {
+  try {
+    const res = await fetch('/api/meta');
+    const meta = await res.json();
+
+    // 師傅
+    const empHTML = meta.employees.map(e => 
+      `<option value="${e.id}::${e.name}">${e.name} (${e.id})</option>`
+    ).join('');
+    document.getElementById('employeeSelect').innerHTML = empHTML;
+    document.getElementById('expenseEmployee').innerHTML = empHTML;
+
+    // 案場
+    const siteHTML = meta.sites.map(s => 
+      `<option value="${s.code}">${s.name} (${s.code})</option>`
+    ).join('');
+    document.getElementById('siteSelect').innerHTML = siteHTML;
+    document.getElementById('expenseSite').innerHTML = siteHTML;
+  } catch(e) {
+    alert('載入清單失敗，請確認後端已啟動');
+  }
+}
+
+async function submitCheckin(type) {
+  const statusEl = document.getElementById('checkinStatus');
+  statusEl.textContent = '定位中...';
+
+  try {
+    const pos = await new Promise((res, rej) => 
+      navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true})
+    );
+
+    const empVal = document.getElementById('employeeSelect').value;
+    const [employeeId, employeeName] = empVal.split('::');
+    const siteCode = document.getElementById('siteSelect').value;
+    const siteName = document.getElementById('siteSelect').selectedOptions[0].textContent.split(' (')[0];
+    const note = document.getElementById('note').value.trim();
+
+    const payload = {
+      employeeId, employeeName, siteCode, siteName,
+      checkType: type,
+      note,
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      clientTime: new Date().toISOString()
+    };
+
+    const res = await fetch('/api/checkin', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    statusEl.innerHTML = `✅ ${type==='in'?'上班':'下班'}報到成功<br>
+師傅：${employeeName}<br>
+案場：${siteName}<br>
+GPS：定位成功`;
+    refreshWorking();
+  } catch(err) {
+    statusEl.textContent = `❌ ${err.message || '操作失敗'}`;
+  }
+}
+
+async function refreshWorking() {
+  try {
+    const res = await fetch('/api/active-work');
+    const data = await res.json();
+    const tbody = document.getElementById('workingBody');
+    tbody.innerHTML = data.active && data.active.length 
+      ? data.active.map(item => `
+        <tr>
+          <td>${item.employeeName}</td>
+          <td>${item.siteName}</td>
+          <td>${item.inTime || '-'}</td>
+          <td>${item.outTime || '-'}</td>
+          <td>${item.note || ''}</td>
+        </tr>`).join('')
+      : '<tr><td colspan="5">目前無上班中人員</td></tr>';
+  } catch(e) {
+    document.getElementById('workingBody').innerHTML = '<tr><td colspan="5">讀取失敗</td></tr>';
+  }
+}
+
+async function submitExpense() {
+  const statusEl = document.getElementById('expenseStatus');
+  try {
+    const empVal = document.getElementById('expenseEmployee').value;
+    const [employeeId, employeeName] = empVal.split('::');
+    const siteCode = document.getElementById('expenseSite').value;
+    const siteName = document.getElementById('expenseSite').selectedOptions[0].textContent.split(' (')[0];
+
+    const payload = {
+      date: document.getElementById('expenseDate').value,
+      employeeName,
+      siteName,
+      misc: Number(document.getElementById('misc').value) || 0,
+      meal: Number(document.getElementById('meal').value) || 0,
+      water: Number(document.getElementById('water').value) || 0,
+      note: document.getElementById('expenseNote').value.trim()
+    };
+
+    const res = await fetch('/api/expense', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    const result = await res.json();
+    statusEl.textContent = `✅ 已成功寫入 Excel\n單日合計：${result.total} 元`;
+  } catch(err) {
+    statusEl.textContent = `❌ ${err.message}`;
+  }
+}
+
+// 事件綁定
+document.getElementById('btnIn').onclick = () => submitCheckin('in');
+document.getElementById('btnOut').onclick = () => submitCheckin('out');
+document.getElementById('btnRefreshWorking').onclick = refreshWorking;
+document.getElementById('btnExpense').onclick = submitExpense;
+
+// 初始化
+document.getElementById('expenseDate').value = new Date().toISOString().slice(0,10);
+loadMeta().then(() => refreshWorking());
+</script>
+</body>
+</html>
