@@ -66,6 +66,18 @@
   </div>
 
 <script>
+  const firebaseConfig = {
+  apiKey: "AIzaSyA1_1XFRJ2QyWwQ911aoLlzOLJ_DEcVlbY",
+  authDomain: "dad-host-arrive.firebaseapp.com",
+  projectId: "dad-host-arrive",
+  storageBucket: "dad-host-arrive.firebasestorage.app",
+  messagingSenderId: "78103512421",
+  appId: "1:78103512421:web:8f834c32f14031b26bcd8c",
+  measurementId: "G-GE57YTDR64"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 // Firebase Config
 const firebaseConfig = { /* 你的 config */ };
 firebase.initializeApp(firebaseConfig);
@@ -96,7 +108,18 @@ function showMainApp(master, site) {
   document.getElementById('currentSite').textContent = `（${site}）`;
 }
 
-function logout() { /* ... */ }
+function loginWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  auth.signInWithPopup(provider)
+    .then(result => {
+      console.log("登入成功", result.user);
+    })
+    .catch(err => {
+      console.error(err);
+      alert("登入失敗：" + err.message);
+    });
+}
 
 // 監聽登入狀態
 auth.onAuthStateChanged(user => {
