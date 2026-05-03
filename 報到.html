@@ -4,234 +4,121 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>師傅報到系統</title>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <style>
     body { margin:0; font-family: Arial,"Microsoft JhengHei",sans-serif; background:#f3f4f6; padding:20px; }
     .app { max-width: 900px; margin: 0 auto; background:#fff; border-radius:16px; box-shadow:0 10px 24px rgba(0,0,0,.08); padding:20px; }
-    h1 { margin:0 0 10px; text-align:center; color:#1e40af; }
-    .tabs { display:flex; gap:10px; margin-bottom:20px; flex-wrap: wrap; }
-    .tabs button { border:none; padding:12px 20px; border-radius:8px; background:#e5e7eb; cursor:pointer; font-weight:700; font-size:16px; }
-    .tabs button.active { background:#2563eb; color:#fff; }
-    .page { display:none; }
-    .page.active { display:block; }
-    .grid { display:grid; gap:12px; }
-    @media (min-width: 700px) { .grid.two { grid-template-columns: 1fr 1fr; } }
-    label { font-weight:700; display:block; margin-bottom:6px; }
-    input, select, textarea { width:100%; border:1px solid #d1d5db; border-radius:8px; padding:10px; font-size:16px; }
-    .btns { display:flex; gap:15px; flex-wrap: wrap; margin-top:20px; }
-    .btn { border:none; border-radius:8px; color:#fff; padding:12px 24px; font-weight:700; cursor:pointer; font-size:18px; }
-    .btn.in { background:#2563eb; padding:28px 40px; font-size:30px; min-width:280px; }
-    .btn.out { background:#0f766e; padding:28px 40px; font-size:30px; min-width:280px; }
-    .status { margin-top:15px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:12px; white-space: pre-wrap; font-size:15px; }
-    table { width:100%; border-collapse: collapse; margin-top:10px; }
-    th, td { border:1px solid #e5e7eb; padding:10px; text-align:left; }
-    th { background:#f3f4f6; }
+    h1 { text-align:center; color:#1e40af; }
+    .login-box { text-align:center; padding:40px 20px; }
+    .login-btn { background:#db4437; color:white; padding:15px 30px; font-size:18px; border:none; border-radius:8px; cursor:pointer; }
+    select, button { padding:10px; font-size:16px; margin:10px; border-radius:8px; }
   </style>
 </head>
 <body>
   <div class="app">
     <h1>師傅報到系統</h1>
-    <div class="tabs">
-      <button class="active" data-page="checkin">1. 報到</button>
-      <button data-page="working">2. 上班中</button>
-      <button data-page="expense">3. 雜支/餐費計算</button>
+
+    <!-- 登入畫面 -->
+    <div id="loginSection" class="login-box">
+      <h2>請先使用 Google 登入</h2>
+      <button class="login-btn" onclick="loginWithGoogle()">🔑 Google 登入</button>
     </div>
 
-    <!-- 1. 報到 -->
-    <section id="checkin" class="page active">
-      <div class="grid two">
-        <div>
-          <label for="employeeSelect">師傅姓名</label>
-          <select id="employeeSelect"></select>
-        </div>
-        <div>
-          <label for="siteSelect">案場名稱</label>
-          <select id="siteSelect"></select>
-        </div>
-      </div>
-      <div class="grid" style="margin-top:12px;">
-        <div>
-          <label for="note">備註</label>
-          <input id="note" placeholder="可不填" />
-        </div>
-      </div>
-      <div class="btns">
-        <button class="btn in" id="btnIn">上班報到</button>
-        <button class="btn out" id="btnOut">下班報到</button>
-      </div>
-      <pre class="status" id="checkinStatus">等待操作...</pre>
-    </section>
+    <!-- 選擇師傅畫面 -->
+    <div id="selectMasterSection" style="display:none; text-align:center; padding:30px;">
+      <h2>歡迎！請選擇您的姓名</h2>
+      <select id="masterSelect" style="width:80%; max-width:400px; padding:12px; font-size:18px;">
+        <option value="">-- 請選擇師傅姓名 --</option>
+      </select><br><br>
+      <button onclick="saveMaster()" style="background:#2563eb; color:white; padding:12px 30px;">確認並進入系統</button>
+    </div>
 
-    <!-- 2. 上班中 -->
-    <section id="working" class="page">
-      <button style="background:#374151; color:white; padding:10px 20px;" id="btnRefreshWorking">重新整理</button>
-      <table>
-        <thead><tr><th>師傅</th><th>案場</th><th>上班時間</th><th>下班時間</th><th>備註</th></tr></thead>
-        <tbody id="workingBody"></tbody>
-      </table>
-    </section>
-
-    <!-- 3. 雜支/餐費計算 -->
-    <section id="expense" class="page">
-      <div class="grid two">
-        <div><label for="expenseDate">日期</label><input id="expenseDate" type="date" /></div>
-        <div><label for="expenseEmployee">師傅姓名</label><select id="expenseEmployee"></select></div>
+    <!-- 主系統畫面 -->
+    <div id="mainApp" style="display:none;">
+      <div style="text-align:right;">
+        <strong id="currentMaster"></strong> | 
+        <button onclick="logout()" style="color:red;">登出</button>
       </div>
-      <div class="grid" style="margin-top:12px;">
-        <div><label for="expenseSite">案場名稱</label><select id="expenseSite"></select></div>
-      </div>
-      <div class="grid two" style="margin-top:15px;">
-        <div><label for="misc">雜支</label><input id="misc" type="number" value="0" /></div>
-        <div><label for="meal">餐費</label><input id="meal" type="number" value="0" /></div>
-      </div>
-      <div class="grid two" style="margin-top:12px;">
-        <div><label for="water">涼水</label><input id="water" type="number" value="0" /></div>
-        <div><label for="expenseNote">備註</label><input id="expenseNote" /></div>
-      </div>
-      <div class="btns">
-        <button class="btn in" id="btnExpense">送出單日計算</button>
-      </div>
-      <pre class="status" id="expenseStatus">等待操作...</pre>
-    </section>
+      
+      <h2 style="text-align:center;">報到功能</h2>
+      <!-- 你原本的報到、分頁、雜支內容可貼在這裡 -->
+      <p>目前已登入，可開始使用報到系統。</p>
+    </div>
   </div>
 
 <script>
-// ==================== 前端 JS ====================
-const tabs = document.querySelectorAll('.tabs button');
-const pages = document.querySelectorAll('.page');
+// Firebase 配置
+const firebaseConfig = {
+  apiKey: "AIzaSyA1_1XFRJ2QyWwQ911aoLlzOLJ_DEcVlbY",
+  authDomain: "dad-host-arrive.firebaseapp.com",
+  projectId: "dad-host-arrive",
+  storageBucket: "dad-host-arrive.firebasestorage.app",
+  messagingSenderId: "78103512421",
+  appId: "1:78103512421:web:8f834c32f14031b26bcd8c"
+};
 
-tabs.forEach(btn => {
-  btn.addEventListener('click', () => {
-    tabs.forEach(b => b.classList.remove('active'));
-    pages.forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(btn.dataset.page).classList.add('active');
-  });
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+auth.languageCode = 'zh-TW';
+
+const masters = [
+  "楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉","江明聰","林威州",
+  "郭永昌","黃怡庭","夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋","楊福昌",
+  "邱鉦元","陳炳煌","張佑承","黃詩權","孫寶堂","陳志偉","陳柏翔","陳侄農",
+  "王瑜翔","陳韋晴","張奕揚","陳永杰"
+];
+
+// Google 登入
+function loginWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err => alert('登入失敗：' + err.message));
+}
+
+// 選擇師傅
+function saveMaster() {
+  const selected = document.getElementById('masterSelect').value;
+  if (!selected) return alert('請選擇師傅姓名');
+  
+  localStorage.setItem('currentMaster', selected);
+  showMainApp(selected);
+}
+
+// 顯示主畫面
+function showMainApp(masterName) {
+  document.getElementById('selectMasterSection').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  document.getElementById('currentMaster').textContent = masterName;
+}
+
+// 登出
+function logout() {
+  auth.signOut();
+  localStorage.removeItem('currentMaster');
+  location.reload();
+}
+
+// 監聽登入狀態
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('loginSection').style.display = 'none';
+    
+    const savedMaster = localStorage.getItem('currentMaster');
+    if (savedMaster) {
+      showMainApp(savedMaster);
+    } else {
+      // 第一次登入，顯示選擇師傅
+      const select = document.getElementById('masterSelect');
+      masters.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      document.getElementById('selectMasterSection').style.display = 'block';
+    }
+  }
 });
-
-async function loadMeta() {
-  try {
-    const res = await fetch('/api/meta');
-    const meta = await res.json();
-
-    // 師傅
-    const empHTML = meta.employees.map(e => 
-      `<option value="${e.id}::${e.name}">${e.name} (${e.id})</option>`
-    ).join('');
-    document.getElementById('employeeSelect').innerHTML = empHTML;
-    document.getElementById('expenseEmployee').innerHTML = empHTML;
-
-    // 案場
-    const siteHTML = meta.sites.map(s => 
-      `<option value="${s.code}">${s.name} (${s.code})</option>`
-    ).join('');
-    document.getElementById('siteSelect').innerHTML = siteHTML;
-    document.getElementById('expenseSite').innerHTML = siteHTML;
-  } catch(e) {
-    alert('載入清單失敗，請確認後端已啟動');
-  }
-}
-
-async function submitCheckin(type) {
-  const statusEl = document.getElementById('checkinStatus');
-  statusEl.textContent = '定位中...';
-
-  try {
-    const pos = await new Promise((res, rej) => 
-      navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true})
-    );
-
-    const empVal = document.getElementById('employeeSelect').value;
-    const [employeeId, employeeName] = empVal.split('::');
-    const siteCode = document.getElementById('siteSelect').value;
-    const siteName = document.getElementById('siteSelect').selectedOptions[0].textContent.split(' (')[0];
-    const note = document.getElementById('note').value.trim();
-
-    const payload = {
-      employeeId, employeeName, siteCode, siteName,
-      checkType: type,
-      note,
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      clientTime: new Date().toISOString()
-    };
-
-    const res = await fetch('/api/checkin', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const result = await res.json();
-
-    statusEl.innerHTML = `✅ ${type==='in'?'上班':'下班'}報到成功<br>
-師傅：${employeeName}<br>
-案場：${siteName}<br>
-GPS：定位成功`;
-    refreshWorking();
-  } catch(err) {
-    statusEl.textContent = `❌ ${err.message || '操作失敗'}`;
-  }
-}
-
-async function refreshWorking() {
-  try {
-    const res = await fetch('/api/active-work');
-    const data = await res.json();
-    const tbody = document.getElementById('workingBody');
-    tbody.innerHTML = data.active && data.active.length 
-      ? data.active.map(item => `
-        <tr>
-          <td>${item.employeeName}</td>
-          <td>${item.siteName}</td>
-          <td>${item.inTime || '-'}</td>
-          <td>${item.outTime || '-'}</td>
-          <td>${item.note || ''}</td>
-        </tr>`).join('')
-      : '<tr><td colspan="5">目前無上班中人員</td></tr>';
-  } catch(e) {
-    document.getElementById('workingBody').innerHTML = '<tr><td colspan="5">讀取失敗</td></tr>';
-  }
-}
-
-async function submitExpense() {
-  const statusEl = document.getElementById('expenseStatus');
-  try {
-    const empVal = document.getElementById('expenseEmployee').value;
-    const [employeeId, employeeName] = empVal.split('::');
-    const siteCode = document.getElementById('expenseSite').value;
-    const siteName = document.getElementById('expenseSite').selectedOptions[0].textContent.split(' (')[0];
-
-    const payload = {
-      date: document.getElementById('expenseDate').value,
-      employeeName,
-      siteName,
-      misc: Number(document.getElementById('misc').value) || 0,
-      meal: Number(document.getElementById('meal').value) || 0,
-      water: Number(document.getElementById('water').value) || 0,
-      note: document.getElementById('expenseNote').value.trim()
-    };
-
-    const res = await fetch('/api/expense', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
-
-    const result = await res.json();
-    statusEl.textContent = `✅ 已成功寫入 Excel\n單日合計：${result.total} 元`;
-  } catch(err) {
-    statusEl.textContent = `❌ ${err.message}`;
-  }
-}
-
-// 事件綁定
-document.getElementById('btnIn').onclick = () => submitCheckin('in');
-document.getElementById('btnOut').onclick = () => submitCheckin('out');
-document.getElementById('btnRefreshWorking').onclick = refreshWorking;
-document.getElementById('btnExpense').onclick = submitExpense;
-
-// 初始化
-document.getElementById('expenseDate').value = new Date().toISOString().slice(0,10);
-loadMeta().then(() => refreshWorking());
 </script>
 </body>
 </html>
