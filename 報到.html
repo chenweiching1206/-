@@ -9,10 +9,10 @@
   <style>
     body { margin:0; font-family: Arial,"Microsoft JhengHei",sans-serif; background:#f3f4f6; padding:20px; }
     .app { max-width: 900px; margin: 0 auto; background:#fff; border-radius:16px; box-shadow:0 10px 24px rgba(0,0,0,.08); padding:20px; }
-    h1 { text-align:center; color:#1e40af; }
+    h1 { margin:0 0 10px; text-align:center; color:#1e40af; }
     .login-box { text-align:center; padding:40px 20px; }
     .login-btn { background:#db4437; color:white; padding:15px 30px; font-size:18px; border:none; border-radius:8px; cursor:pointer; }
-    select, button { padding:10px; font-size:16px; margin:10px; border-radius:8px; }
+    select, button { padding:12px; font-size:17px; margin:8px 0; border-radius:8px; width:85%; max-width:500px; }
   </style>
 </head>
 <body>
@@ -21,101 +21,101 @@
 
     <!-- 登入畫面 -->
     <div id="loginSection" class="login-box">
-      <h2>請先使用 Google 登入</h2>
-      <button class="login-btn" onclick="loginWithGoogle()">🔑 Google 登入</button>
+      <h2>請先登入系統</h2>
+      <button class="login-btn" onclick="loginWithGoogle()">🔑 使用 Google 帳號登入</button>
     </div>
 
-    <!-- 選擇師傅畫面 -->
-    <div id="selectMasterSection" style="display:none; text-align:center; padding:30px;">
-      <h2>歡迎！請選擇您的姓名</h2>
-      <select id="masterSelect" style="width:80%; max-width:400px; padding:12px; font-size:18px;">
-        <option value="">-- 請選擇師傅姓名 --</option>
-      </select><br><br>
-      <button onclick="saveMaster()" style="background:#2563eb; color:white; padding:12px 30px;">確認並進入系統</button>
-    </div>
-
-    <!-- 主系統畫面 -->
-    <div id="mainApp" style="display:none;">
-      <div style="text-align:right;">
-        <strong id="currentMaster"></strong> | 
-        <button onclick="logout()" style="color:red;">登出</button>
-      </div>
+    <!-- 選擇師傅與案場 -->
+    <div id="selectSection" style="display:none; text-align:center; padding:30px;">
+      <h2>第一次設定</h2>
+      <p>請選擇您的姓名與今天工作的案場</p>
       
-      <h2 style="text-align:center;">報到功能</h2>
-      <!-- 你原本的報到、分頁、雜支內容可貼在這裡 -->
-      <p>目前已登入，可開始使用報到系統。</p>
+      <select id="masterSelect"><option value="">-- 選擇師傅姓名 --</option></select><br>
+      <select id="siteSelect"><option value="">-- 選擇今天案場 --</option></select><br><br>
+      
+      <button onclick="saveSelection()" style="background:#2563eb; color:white; padding:12px 30px; font-size:18px;">確認進入系統</button>
+    </div>
+
+    <!-- 主系統 -->
+    <div id="mainApp" style="display:none;">
+      <div style="text-align:right; margin-bottom:10px;">
+        <strong id="currentMaster"></strong>　<span id="currentSite" style="color:#666;"></span>
+        <button onclick="logout()" style="color:red; margin-left:10px;">登出</button>
+      </div>
+
+      <!-- 你的原本功能（報到、上班中、雜支） -->
+      <div class="tabs">
+        <button class="active" data-page="checkin">1. 報到</button>
+        <button data-page="working">2. 上班中</button>
+        <button data-page="expense">3. 雜支/餐費計算</button>
+      </div>
+
+      <section id="checkin" class="page active">
+        <!-- 你原本的報到內容 -->
+        <div class="grid two">
+          <div><label>師傅姓名</label><select id="employeeSelect"></select></div>
+          <div><label>案場名稱</label><select id="siteSelectMain"></select></div>
+        </div>
+        <div class="btns" style="margin-top:20px;">
+          <button class="btn in" id="btnIn">上班報到</button>
+          <button class="btn out" id="btnOut">下班報到</button>
+        </div>
+        <pre class="status" id="checkinStatus">等待操作...</pre>
+      </section>
     </div>
   </div>
 
 <script>
-// Firebase 配置
-const firebaseConfig = {
-  apiKey: "AIzaSyA1_1XFRJ2QyWwQ911aoLlzOLJ_DEcVlbY",
-  authDomain: "dad-host-arrive.firebaseapp.com",
-  projectId: "dad-host-arrive",
-  storageBucket: "dad-host-arrive.firebasestorage.app",
-  messagingSenderId: "78103512421",
-  appId: "1:78103512421:web:8f834c32f14031b26bcd8c"
-};
-
+// Firebase Config
+const firebaseConfig = { /* 你的 config */ };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 auth.languageCode = 'zh-TW';
 
-const masters = [
-  "楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉","江明聰","林威州",
-  "郭永昌","黃怡庭","夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋","楊福昌",
-  "邱鉦元","陳炳煌","張佑承","黃詩權","孫寶堂","陳志偉","陳柏翔","陳侄農",
-  "王瑜翔","陳韋晴","張奕揚","陳永杰"
-];
+const masters = [ /* 你的28位師傅名單 */ ];
+const sites = ["達麗", "達麗標準", "拾穗", "寶輝"];
 
-// Google 登入
-function loginWithGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => alert('登入失敗：' + err.message));
-}
+// 登入
+function loginWithGoogle() { /* ... */ }
 
-// 選擇師傅
-function saveMaster() {
-  const selected = document.getElementById('masterSelect').value;
-  if (!selected) return alert('請選擇師傅姓名');
+// 保存選擇
+function saveSelection() {
+  const master = document.getElementById('masterSelect').value;
+  const site = document.getElementById('siteSelect').value;
+  if (!master || !site) return alert('請選擇師傅姓名和案場');
   
-  localStorage.setItem('currentMaster', selected);
-  showMainApp(selected);
+  localStorage.setItem('currentMaster', master);
+  localStorage.setItem('currentSite', site);
+  showMainApp(master, site);
 }
 
-// 顯示主畫面
-function showMainApp(masterName) {
-  document.getElementById('selectMasterSection').style.display = 'none';
+function showMainApp(master, site) {
+  document.getElementById('selectSection').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
-  document.getElementById('currentMaster').textContent = masterName;
+  document.getElementById('currentMaster').textContent = master;
+  document.getElementById('currentSite').textContent = `（${site}）`;
 }
 
-// 登出
-function logout() {
-  auth.signOut();
-  localStorage.removeItem('currentMaster');
-  location.reload();
-}
+function logout() { /* ... */ }
 
 // 監聽登入狀態
 auth.onAuthStateChanged(user => {
   if (user) {
     document.getElementById('loginSection').style.display = 'none';
-    
     const savedMaster = localStorage.getItem('currentMaster');
-    if (savedMaster) {
-      showMainApp(savedMaster);
+    const savedSite = localStorage.getItem('currentSite');
+    
+    if (savedMaster && savedSite) {
+      showMainApp(savedMaster, savedSite);
     } else {
-      // 第一次登入，顯示選擇師傅
-      const select = document.getElementById('masterSelect');
-      masters.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-      document.getElementById('selectMasterSection').style.display = 'block';
+      // 填入選單
+      const mSelect = document.getElementById('masterSelect');
+      masters.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; mSelect.appendChild(o); });
+      
+      const sSelect = document.getElementById('siteSelect');
+      sites.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sSelect.appendChild(o); });
+      
+      document.getElementById('selectSection').style.display = 'block';
     }
   }
 });
