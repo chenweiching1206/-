@@ -128,8 +128,30 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 auth.languageCode = 'zh-TW';
 
-// ⭐ 你的 Apps Script
+// ==================== Google Sheet ====================
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxYViv8VAwZi0kLBrdpdkF6d8gfIR3IHB5eQZqLswPkGkmU9-DSd5OIH_X20ewF7THO/exec";
+
+// ==================== 案場 GPS ====================
+const siteLocations = {
+  "拾穗": { lat: 24.1657, lng: 120.6395 },
+  "達麗": { lat: 24.1642, lng: 120.6465 },
+  "達麗標準": { lat: 24.1642, lng: 120.6465 },
+  "寶輝": { lat: 24.1395, lng: 120.6438 }
+};
+
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) * 1000;
+}
 
 // ==================== 資料 ====================
 const masters = ["楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉","江明聰","林威州","郭永昌","黃怡庭","夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋","楊福昌","邱鉦元","陳炳煌","張佑承","黃詩權","孫寶堂","陳志偉","陳柏翔","陳侄農","王瑜翔","陳韋晴","張奕揚","陳永杰"];
@@ -167,6 +189,19 @@ document.getElementById('btnIn').addEventListener('click', async () => {
   if (!master || !site) return alert("請選資料");
 
   navigator.geolocation.getCurrentPosition(async pos => {
+    const userLat = pos.coords.latitude;
+    const userLng = pos.coords.longitude;
+
+    const siteData = siteLocations[site];
+    if (!siteData) return alert("案場未設定 GPS");
+
+    const distance = getDistance(userLat, userLng, siteData.lat, siteData.lng);
+    const LIMIT = 250;
+
+    if (distance > LIMIT) {
+      return alert(`❌ 不在案場範圍內（距離 ${Math.round(distance)} 公尺）`);
+    }
+
     const now = new Date();
 
     // 防重複
@@ -186,8 +221,8 @@ document.getElementById('btnIn').addEventListener('click', async () => {
       site,
       type: "in",
       note,
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
+      lat: userLat,
+      lng: userLng,
       time: now
     });
 
@@ -222,7 +257,6 @@ document.getElementById('btnOut').addEventListener('click', async () => {
     hours
   });
 
-  // 傳到 Google Sheet
   await fetch(GAS_URL, {
     method: "POST",
     body: JSON.stringify({
@@ -258,7 +292,6 @@ function showMainApp(master, site) {
   document.getElementById('mainApp').style.display = 'block';
   document.getElementById('currentMaster').textContent = master;
   document.getElementById('currentSite').textContent = site;
-
   initSelects();
 }
 
