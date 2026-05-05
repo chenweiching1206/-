@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>師傅報到系統</title>
+  <title>盛勤師傅報到系統</title>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
   <style>
@@ -34,7 +34,7 @@
 </head>
 <body>
   <div class="app">
-    <h1>師傅報到系統</h1>
+    <h1>盛勤師傅報到系統</h1>
 
     <!-- 登入畫面 -->
     <div id="loginSection" class="login-box">
@@ -58,15 +58,14 @@
       </div>
 
       <div class="tabs">
-        <button class="active" data-page="checkin">1. 報到</button>
-        <button data-page="working">2. 上班中</button>
-        <button data-page="expense">3. 雜支/餐費計算</button>
+        <button class="active" data-page="checkin">報到</button>
+        <button data-page="working">上班中</button>
+        <button data-page="expense">雜支/餐費計算</button>
       </div>
 
       <!-- 1. 報到 -->
       <section id="checkin" class="page active">
         <div class="grid two">
-          <div><label>師傅姓名</label><select id="employeeSelect"></select></div>
           <div><label>案場名稱</label><select id="siteSelect"></select></div>
         </div>
         <div class="grid" style="margin-top:10px;">
@@ -76,7 +75,7 @@
           <button class="btn in" id="btnIn">上班報到</button>
           <button class="btn out" id="btnOut">下班報到</button>
         </div>
-        <pre class="status" id="checkinStatus">等待操作...</pre>
+        <pre class="status" id="checkinStatus">需等待5~10秒謝謝~~~</pre>
       </section>
 
       <!-- 2. 上班中 -->
