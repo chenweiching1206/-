@@ -124,8 +124,41 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
+  const db = firebase.firestore();
 auth.languageCode = 'zh-TW';
+const GAS_URL = "👉等你給我填";
 
+document.getElementById('btnIn').addEventListener('click', async () => {
+  const master = document.getElementById('employeeSelect').value;
+  const site = document.getElementById('siteSelect').value;
+  const note = document.getElementById('note').value;
+
+  if (!master || !site) return alert("請選擇資料");
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const data = {
+      master,
+      site,
+      type: "上班",
+      note,
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      time: new Date()
+    };
+
+    // 🔵 存 Firestore
+    await db.collection("checkins").add(data);
+
+    // 🟢 同步 Google Sheet
+    await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+
+    document.getElementById('checkinStatus').textContent =
+      "✅ 打卡成功";
+  });
+});  
 const masters = ["楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉","江明聰","林威州","郭永昌","黃怡庭","夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋","楊福昌","邱鉦元","陳炳煌","張佑承","黃詩權","孫寶堂","陳志偉","陳柏翔","陳侄農","王瑜翔","陳韋晴","張奕揚","陳永杰"];
 const todaySites = ["達麗","達麗標準","拾穗","寶輝"];
 
