@@ -3,15 +3,19 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 const { JWT } = require('google-auth-library');
 
 const app = express();
+
 app.use(cors());
 app.use(bodyParser.json());
+
+// ✅ 修正：靜態檔案（你的 HTML）
 app.use(express.static(__dirname));
 
-// ==================== 師傅資料（補上） ====================
+// ==================== 師傅資料 ====================
 const masters = [
   "楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉",
   "江明聰","林威州","郭永昌","黃怡庭","夏郡甫","廖榮貴",
@@ -20,7 +24,7 @@ const masters = [
   "王瑜翔","陳韋晴","張奕揚","陳永杰"
 ];
 
-// ==================== Sheet 初始化 ====================
+// ==================== Google Sheet ====================
 let doc;
 let sheetCache = {};
 
@@ -61,6 +65,11 @@ async function initSheet() {
     console.error('❌ Google Sheet 連接失敗:', e.message);
   }
 }
+
+// ==================== ⭐ 關鍵修正：首頁路由 ====================
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
 // ==================== API ====================
 
@@ -121,7 +130,7 @@ app.post('/api/expense', async (req, res) => {
   }
 });
 
-// ==================== 上班中（未來用） ====================
+// ==================== 上班中 ====================
 app.get('/api/active-work', (req, res) => {
   res.json({ active: [] });
 });
