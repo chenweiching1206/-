@@ -275,25 +275,27 @@ function loginWithGoogle() {
   auth.signInWithPopup(provider);
 }
 
-function saveSelection() {
-  const master = document.getElementById('masterSelect').value;
-  const site = document.getElementById('todaySite').value;
+function saveSelection(){
+  const master = document.getElementById("masterSelect").value;
 
-  if (!master || !site) return alert("請選擇");
+  if(!master) return alert("請選擇師傅");
 
-  localStorage.setItem('currentMaster', master);
-  localStorage.setItem('currentSite', site);
-  showMainApp(master, site);
+  localStorage.setItem("currentMaster", master);
+
+  showMain(master);
 }
 
-function showMainApp(master, site) {
-  document.getElementById('selectSection').style.display = 'none';
-  document.getElementById('mainApp').style.display = 'block';
-  document.getElementById('currentMaster').textContent = master;
-  document.getElementById('currentSite').textContent = site;
+function showMain(m){
+  document.getElementById("selectSection").style.display = "none";
+  document.getElementById("mainApp").style.display = "block";
+
+  document.getElementById("currentMaster").textContent = m;
+
   initSelects();
-}
 
+  // 回報到頁
+  document.querySelector('[data-page="checkin"]').click();
+}
 function logout() {
   auth.signOut();
   localStorage.clear();
@@ -312,23 +314,26 @@ document.querySelectorAll('.tabs button').forEach(btn => {
 
 // ==================== 登入監聽 ====================
 auth.onAuthStateChanged(user => {
-  if (user) {
-    document.getElementById('loginSection').style.display = 'none';
+  if (!user) {
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("selectSection").style.display = "none";
+    document.getElementById("mainApp").style.display = "none";
+    return;
+  }
 
-    const savedMaster = localStorage.getItem('currentMaster');
-    const savedSite = localStorage.getItem('currentSite');
+  document.getElementById("loginSection").style.display = "none";
 
-    if (savedMaster && savedSite) {
-      showMainApp(savedMaster, savedSite);
-    } else {
-      const mSelect = document.getElementById('masterSelect');
-      masters.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        mSelect.appendChild(opt);
-      });
+  const savedMaster = localStorage.getItem("currentMaster");
 
+  // ⭐ 如果已經有記錄 → 直接進系統
+  if (savedMaster) {
+    showMain(savedMaster);
+  } else {
+    // 第一次登入才選
+    document.getElementById("selectSection").style.display = "block";
+    initSelects();
+  }
+});
       const sSelect = document.getElementById('todaySite');
       todaySites.forEach(s => {
         const opt = document.createElement('option');
