@@ -68,7 +68,7 @@ async function initSheet() {
 
 // ==================== ⭐ 關鍵修正：首頁路由 ====================
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "報到.html"));
 });
 
 // ==================== API ====================
