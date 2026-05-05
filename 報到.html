@@ -45,9 +45,8 @@
     <!-- 第一次選擇師傅與案場 -->
     <div id="selectSection" style="display:none; text-align:center; padding:40px;">
       <h2>歡迎！請完成設定</h2>
-      <p>請選擇您的姓名與今天工作的案場</p>
+      <p>請選擇您的姓名</p>
       <select id="masterSelect"><option value="">-- 選擇師傅姓名 --</option></select><br><br>
-      <select id="todaySite"><option value="">-- 選擇今天案場 --</option></select><br><br>
       <button onclick="saveSelection()" style="background:#2563eb; color:white; padding:12px 40px; font-size:18px;">確認進入系統</button>
     </div>
 
@@ -59,9 +58,9 @@
       </div>
 
       <div class="tabs">
-        <button class="active" data-page="checkin">1. 報到</button>
-        <button data-page="working">2. 上班中</button>
-        <button data-page="expense">3. 雜支/餐費計算</button>
+        <button class="active" data-page="checkin">報到</button>
+        <button data-page="working">上班中</button>
+        <button data-page="expense">雜支/餐費計算</button>
       </div>
 
       <!-- 1. 報到 -->
@@ -77,7 +76,7 @@
           <button class="btn in" id="btnIn">上班報到</button>
           <button class="btn out" id="btnOut">下班報到</button>
         </div>
-        <pre class="status" id="checkinStatus">等待操作...</pre>
+        <pre class="status" id="checkinStatus">等待5~10秒謝謝...</pre>
       </section>
 
       <!-- 2. 上班中 -->
