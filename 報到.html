@@ -30,6 +30,7 @@
     th, td { border:1px solid #e5e7eb; padding:8px; text-align:left; }
     th { background:#f3f4f6; }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="app">
@@ -124,55 +125,129 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-  const db = firebase.firestore();
+const db = firebase.firestore();
 auth.languageCode = 'zh-TW';
-const GAS_URL = "👉等你給我填";
 
+// ⭐ 你的 Apps Script
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxYViv8VAwZi0kLBrdpdkF6d8gfIR3IHB5eQZqLswPkGkmU9-DSd5OIH_X20ewF7THO/exec";
+
+// ==================== 資料 ====================
+const masters = ["楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉","江明聰","林威州","郭永昌","黃怡庭","夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋","楊福昌","邱鉦元","陳炳煌","張佑承","黃詩權","孫寶堂","陳志偉","陳柏翔","陳侄農","王瑜翔","陳韋晴","張奕揚","陳永杰"];
+const todaySites = ["達麗","達麗標準","拾穗","寶輝"];
+
+// ==================== 初始化 ====================
+function initSelects() {
+  const emp = document.getElementById('employeeSelect');
+  const site = document.getElementById('siteSelect');
+
+  emp.innerHTML = "";
+  site.innerHTML = "";
+
+  masters.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m;
+    emp.appendChild(opt);
+  });
+
+  todaySites.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    site.appendChild(opt);
+  });
+}
+
+// ==================== 上班 ====================
 document.getElementById('btnIn').addEventListener('click', async () => {
   const master = document.getElementById('employeeSelect').value;
   const site = document.getElementById('siteSelect').value;
   const note = document.getElementById('note').value;
 
-  if (!master || !site) return alert("請選擇資料");
+  if (!master || !site) return alert("請選資料");
 
   navigator.geolocation.getCurrentPosition(async pos => {
-    const data = {
+    const now = new Date();
+
+    // 防重複
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const check = await db.collection("checkins")
+      .where("master","==",master)
+      .where("type","==","in")
+      .where("time",">=",today)
+      .get();
+
+    if (!check.empty) return alert("今天已打過上班卡");
+
+    await db.collection("checkins").add({
       master,
       site,
-      type: "上班",
+      type: "in",
       note,
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
-      time: new Date()
-    };
-
-    // 🔵 存 Firestore
-    await db.collection("checkins").add(data);
-
-    // 🟢 同步 Google Sheet
-    await fetch(GAS_URL, {
-      method: "POST",
-      body: JSON.stringify(data)
+      time: now
     });
 
-    document.getElementById('checkinStatus').textContent =
-      "✅ 打卡成功";
+    document.getElementById('checkinStatus').textContent = "✅ 上班成功";
   });
-});  
-const masters = ["楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞","楊宗珉","江明聰","林威州","郭永昌","黃怡庭","夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋","楊福昌","邱鉦元","陳炳煌","張佑承","黃詩權","孫寶堂","陳志偉","陳柏翔","陳侄農","王瑜翔","陳韋晴","張奕揚","陳永杰"];
-const todaySites = ["達麗","達麗標準","拾穗","寶輝"];
+});
 
-// ==================== 登入功能 ====================
+// ==================== 下班 ====================
+document.getElementById('btnOut').addEventListener('click', async () => {
+  const master = document.getElementById('employeeSelect').value;
+  if (!master) return alert("請選師傅");
+
+  const snapshot = await db.collection("checkins")
+    .where("master","==",master)
+    .where("type","==","in")
+    .orderBy("time","desc")
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) return alert("找不到上班紀錄");
+
+  const doc = snapshot.docs[0];
+  const data = doc.data();
+
+  const inTime = data.time.toDate();
+  const outTime = new Date();
+  const hours = Math.floor((outTime - inTime) / 3600000);
+
+  await doc.ref.update({
+    type: "out",
+    outTime,
+    hours
+  });
+
+  // 傳到 Google Sheet
+  await fetch(GAS_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      master: data.master,
+      site: data.site,
+      hours: hours
+    })
+  });
+
+  document.getElementById('checkinStatus').textContent =
+    `✅ 下班成功\n工時：${hours} 小時`;
+});
+
+// ==================== 登入 ====================
 function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => alert('登入失敗：' + err.message));
+  auth.signInWithPopup(provider);
 }
 
 function saveSelection() {
   const master = document.getElementById('masterSelect').value;
   const site = document.getElementById('todaySite').value;
-  if (!master || !site) return alert('請選擇師傅姓名和今天案場');
-  
+
+  if (!master || !site) return alert("請選擇");
+
   localStorage.setItem('currentMaster', master);
   localStorage.setItem('currentSite', site);
   showMainApp(master, site);
@@ -183,17 +258,17 @@ function showMainApp(master, site) {
   document.getElementById('mainApp').style.display = 'block';
   document.getElementById('currentMaster').textContent = master;
   document.getElementById('currentSite').textContent = site;
+
+  initSelects();
 }
 
 function logout() {
-  if (confirm('確定要登出嗎？')) {
-    auth.signOut();
-    localStorage.clear();
-    location.reload();
-  }
+  auth.signOut();
+  localStorage.clear();
+  location.reload();
 }
 
-// ==================== 頁籤切換 ====================
+// ==================== Tabs ====================
 document.querySelectorAll('.tabs button').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
@@ -203,29 +278,33 @@ document.querySelectorAll('.tabs button').forEach(btn => {
   });
 });
 
-// ==================== 登入狀態監聽 ====================
+// ==================== 登入監聽 ====================
 auth.onAuthStateChanged(user => {
   if (user) {
     document.getElementById('loginSection').style.display = 'none';
+
     const savedMaster = localStorage.getItem('currentMaster');
     const savedSite = localStorage.getItem('currentSite');
-    
+
     if (savedMaster && savedSite) {
       showMainApp(savedMaster, savedSite);
     } else {
-      // 第一次登入
       const mSelect = document.getElementById('masterSelect');
       masters.forEach(m => {
         const opt = document.createElement('option');
-        opt.value = m; opt.textContent = m;
+        opt.value = m;
+        opt.textContent = m;
         mSelect.appendChild(opt);
       });
+
       const sSelect = document.getElementById('todaySite');
       todaySites.forEach(s => {
         const opt = document.createElement('option');
-        opt.value = s; opt.textContent = s;
+        opt.value = s;
+        opt.textContent = s;
         sSelect.appendChild(opt);
       });
+
       document.getElementById('selectSection').style.display = 'block';
     }
   }
