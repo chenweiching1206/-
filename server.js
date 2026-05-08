@@ -50,7 +50,11 @@ async function initSheet() {
   try {
     const jwt = new JWT({
       email: process.env.GOOGLE_CLIENT_EMAIL,
-      key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      if (!process.env.GOOGLE_PRIVATE_KEY) {
+  throw new Error("❌ GOOGLE_PRIVATE_KEY 沒有設定");
+}
+
+const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
