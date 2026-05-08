@@ -45,7 +45,11 @@ async function getSheet(title) {
   sheetCache[title] = sheet;
   return sheet;
 }
-
+const jwt = new JWT({
+  email: process.env.GOOGLE_CLIENT_EMAIL,
+  key: privateKey,
+  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+});
 async function initSheet() {
   try {
     const jwt = new JWT({
