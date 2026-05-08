@@ -356,7 +356,7 @@ auth.languageCode = 'zh-TW';
 // ================= Google Sheet =================
 
 const GAS_URL =
-"https://script.google.com/macros/s/AKfycbxYViv8VAwZi0kLBrdpdkF6d8gfIR3IHB5eQZqLswPkGkmU9-DSd5OIH_X20ewF7THO/exec";
+"https://script.google.com/macros/s/AKfycbxWiMLhVff2qgC4Heibmlo-YjXHYMY0u7DJ6vXEQVo5yDbQCGhOf3yi98Yed-Ce-ilW/exec";
 
 // ================= GPS =================
 
@@ -662,14 +662,17 @@ document.getElementById('btnOut')
   });
 
   await fetch(GAS_URL, {
-    method: "POST",
-    body: JSON.stringify({
-      master: data.master,
-      site: data.site,
-      hours: hours
-    })
-  });
-
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    master: data.master,
+    site: data.site,
+    hours: hours,
+    note: data.note || ""
+  })
+});
   document.getElementById('checkinStatus').textContent =
 `✅ 下班成功
 工時：${hours} 小時`;
