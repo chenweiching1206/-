@@ -554,8 +554,9 @@ document.getElementById('btnIn')
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(async pos => {
+navigator.geolocation.getCurrentPosition(
 
+async pos => {
     const userLat = pos.coords.latitude;
     const userLng = pos.coords.longitude;
 
@@ -590,7 +591,7 @@ document.getElementById('btnIn')
 
     const check = await db.collection("checkins")
       .where("master","==",master)
-      .where("type","==","in")
+   .where("isWorking","==",true)
       .where("time",">=",today)
       .get();
 
@@ -601,21 +602,30 @@ document.getElementById('btnIn')
       return;
     }
 
-    await db.collection("checkins").add({
-      master,
-      site,
-      type: "in",
-      note,
-      lat: userLat,
-      lng: userLng,
-      time: now
-    });
+   await db.collection("checkins").add({
+  master,
+  site,
+  type: "in",
+  isWorking: true,
+  note,
+  lat: userLat,
+  lng: userLng,
+  time: now
+});
 
     document.getElementById('checkinStatus').textContent =
       "✅ 上班成功";
 
   });
-});
+},
+
+err => {
+
+  alert("無法取得 GPS 定位");
+
+}
+
+);
 
 // ================= 下班 =================
 
@@ -652,14 +662,14 @@ document.getElementById('btnOut')
 
   const outTime = new Date();
 
-  const hours =
-    Math.floor((outTime - inTime) / 3600000);
+ const hours =
+  ((outTime - inTime) / 3600000).toFixed(1);
 
   await doc.ref.update({
-    type: "out",
-    outTime,
-    hours
-  });
+  outTime,
+  hours,
+  isWorking: false
+});;
 
   await fetch(GAS_URL, {
   method: "POST",
@@ -678,7 +688,60 @@ document.getElementById('btnOut')
 工時：${hours} 小時`;
 
 });
+// ================= 上班中 =================
 
+async function loadWorking() {
+
+  const tbody =
+    document.getElementById("workingBody");
+
+  tbody.innerHTML = "";
+
+  const snapshot = await db.collection("checkins")
+    .orderBy("time", "desc")
+    .get();
+
+  snapshot.forEach(doc => {
+
+    const d = doc.data();
+
+    const tr = document.createElement("tr");
+
+    tr.innerHTML = `
+      <td>${d.master || ""}</td>
+      <td>${d.site || ""}</td>
+      <td>${d.time ? d.time.toDate().toLocaleString() : ""}</td>
+      <td>${d.outTime ? d.outTime.toDate().toLocaleString() : "上班中"}</td>
+      <td>${d.note || ""}</td>
+    `;
+
+    tbody.appendChild(tr);
+
+  });
+
+}
+  // ================= 雜支 =================
+
+document.getElementById("btnExpense")
+.addEventListener("click", async () => {
+
+  const data = {
+    date: document.getElementById("expenseDate").value,
+    master: document.getElementById("expenseEmployee").value,
+    site: document.getElementById("expenseSite").value,
+    misc: Number(document.getElementById("misc").value),
+    meal: Number(document.getElementById("meal").value),
+    water: Number(document.getElementById("water").value),
+    note: document.getElementById("expenseNote").value,
+    createdAt: new Date()
+  };
+
+  await db.collection("expenses").add(data);
+
+  document.getElementById("expenseStatus").textContent =
+    "✅ 已送出";
+
+});
 // ================= Firebase 登入監聽 =================
 
 auth.onAuthStateChanged(user => {
@@ -729,7 +792,9 @@ document
 document
   .getElementById("logoutBtn")
   .addEventListener("click", logout);
-
+document
+  .getElementById("btnRefreshWorking")
+  .addEventListener("click", loadWorking);
 </script>
 </body>
 </html>>
