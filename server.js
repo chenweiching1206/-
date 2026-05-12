@@ -25,40 +25,56 @@ const masters = [
 ];
 
 // ==================== Google Sheet ====================
+// ==================== Google Sheet ====================
+
 let doc;
 let sheetCache = {};
 
 async function getSheet(title) {
+
   if (sheetCache[title]) return sheetCache[title];
 
   let sheet = doc.sheetsByTitle[title];
 
   if (!sheet) {
+
     sheet = await doc.addSheet({
       title,
       headerValues: [
-        '師傅姓名','案場','類型','時間','備註','工時','lat','lng'
+        '師傅姓名',
+        '案場',
+        '類型',
+        '時間',
+        '備註',
+        '工時',
+        'lat',
+        'lng'
       ]
     });
+
   }
 
   sheetCache[title] = sheet;
+
   return sheet;
 }
-const jwt = new JWT({
-  email: process.env.GOOGLE_CLIENT_EMAIL,
-  key: privateKey,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+
 async function initSheet() {
+
   try {
+
+    if (!process.env.GOOGLE_PRIVATE_KEY) {
+
+      throw new Error("❌ GOOGLE_PRIVATE_KEY 沒有設定");
+
+    }
+
+    const privateKey =
+      process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
+
     const jwt = new JWT({
       email: process.env.GOOGLE_CLIENT_EMAIL,
-      if (!process.env.GOOGLE_PRIVATE_KEY) {
-  throw new Error("❌ GOOGLE_PRIVATE_KEY 沒有設定");
-}
-
-const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
+      key: privateKey,
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
@@ -68,10 +84,15 @@ const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
     );
 
     await doc.loadInfo();
+
     console.log('✅ Google Sheet 已連接成功');
+
   } catch (e) {
+
     console.error('❌ Google Sheet 連接失敗:', e.message);
+
   }
+
 }
 
 // ==================== ⭐ 關鍵修正：首頁路由 ====================
