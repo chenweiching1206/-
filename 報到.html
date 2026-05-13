@@ -335,6 +335,8 @@
 document.addEventListener("DOMContentLoaded", () => {
 <script>
 
+document.addEventListener("DOMContentLoaded", () => {
+
 // ================= Firebase =================
 
 const firebaseConfig = {
@@ -353,450 +355,109 @@ const db = firebase.firestore();
 
 auth.languageCode = 'zh-TW';
 
-// ================= Google Sheet =================
+// ================= GAS =================
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyCfZIuCOltSx-3xBfv2qX5SVa6klDZG8kv-fc8nn45B5OOpJwgkUxWkuzmE0rXpRXY/exec";
 
-const GAS_URL =
-"https://script.google.com/macros/s/AKfycbyCfZIuCOltSx-3xBfv2qX5SVa6klDZG8kv-fc8nn45B5OOpJwgkUxWkuzmE0rXpRXY/exec";
+// ================= DATA =================
 
-// ================= GPS =================
+const masters = ["楊家齊","陳俊孝","葉芷柔"];
+const todaySites = ["達麗","拾穗","寶輝"];
 
-const siteLocations = {
-  "拾穗": { lat: 24.1657, lng: 120.6395 },
-  "達麗": { lat: 24.1642, lng: 120.6465 },
-  "達麗標準": { lat: 24.1642, lng: 120.6465 },
-  "寶輝": { lat: 24.1395, lng: 120.6438 }
-};
-
-function getDistance(lat1, lng1, lat2, lng2) {
-
-  const R = 6371;
-
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 1000;
-}
-
-// ================= 資料 =================
-
-const masters = [
-  "楊家齊","陳俊孝","葉芷柔","林慧筑","趙建鈞",
-  "楊宗珉","江明聰","林威州","郭永昌","黃怡庭",
-  "夏郡甫","廖榮貴","孫志榮","胡天養","李僑紋",
-  "楊福昌","邱鉦元","陳炳煌","張佑承","黃詩權",
-  "孫寶堂","陳志偉","陳柏翔","陳侄農","王瑜翔",
-  "陳韋晴","張奕揚","陳永杰"
-];
-
-const todaySites = [
-  "達麗",
-  "達麗標準",
-  "拾穗",
-  "寶輝"
-];
-
-// ================= 初始化 =================
+// ================= init =================
 
 function initSelects() {
 
   const emp = document.getElementById('employeeSelect');
   const site = document.getElementById('siteSelect');
   const master = document.getElementById('masterSelect');
-
   const expenseEmployee = document.getElementById('expenseEmployee');
-  const expenseSite = document.getElementById('expenseSite');
 
-  if (!emp || !site || !master || !expenseEmployee || !expenseSite) {
-    console.error("DOM 尚未載入完成");
-    return;
-  }
+  if (!emp || !site || !master || !expenseEmployee) return;
 
   emp.innerHTML = "";
   site.innerHTML = "";
+  master.innerHTML = '<option value="">-- 選擇師傅 --</option>';
   expenseEmployee.innerHTML = "";
-  expenseSite.innerHTML = "";
-
-  master.innerHTML = '<option value="">-- 選擇師傅姓名 --</option>';
 
   masters.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
 
-    const opt1 = document.createElement('option');
-    opt1.value = m;
-    opt1.textContent = m;
-    emp.appendChild(opt1);
-
-    const opt2 = document.createElement('option');
-    opt2.value = m;
-    opt2.textContent = m;
-    master.appendChild(opt2);
-
-    const opt3 = document.createElement('option');
-    opt3.value = m;
-    opt3.textContent = m;
-    expenseEmployee.appendChild(opt3);
+    emp.appendChild(opt);
+    master.appendChild(opt.cloneNode(true));
+    expenseEmployee.appendChild(opt.cloneNode(true));
   });
 
   todaySites.forEach(s => {
-
-    const opt1 = document.createElement('option');
-    opt1.value = s;
-    opt1.textContent = s;
-    site.appendChild(opt1);
-
-    const opt2 = document.createElement('option');
-    opt2.value = s;
-    opt2.textContent = s;
-    expenseSite.appendChild(opt2);
-  });
-}
-  todaySites.forEach(s => {
-
-    const opt1 = document.createElement('option');
-    opt1.value = s;
-    opt1.textContent = s;
-    site.appendChild(opt1);
-
-    const opt2 = document.createElement('option');
-    opt2.value = s;
-    opt2.textContent = s;
-    expenseSite.appendChild(opt2);
-
+    const opt = document.createElement("option");
+    opt.value = s;
+    opt.textContent = s;
+    site.appendChild(opt);
   });
 }
 
-// ================= Google 登入 =================
+// ================= login =================
 
 function loginWithGoogle() {
-
   const provider = new firebase.auth.GoogleAuthProvider();
-
-  auth.signInWithPopup(provider)
-    .catch(err => {
-      alert("登入失敗：" + err.message);
-    });
+  auth.signInWithPopup(provider);
 }
 
-// ================= 儲存師傅 =================
+// ================= save =================
 
 function saveSelection() {
-
-  const master =
-    document.getElementById("masterSelect").value;
-
-  if (!master) {
-    alert("請選擇師傅");
-    return;
-  }
-
+  const master = document.getElementById("masterSelect").value;
+  if (!master) return alert("選師傅");
   localStorage.setItem("currentMaster", master);
-
   showMain(master);
 }
 
-// ================= 顯示主系統 =================
+// ================= show main =================
 
 function showMain(master) {
 
-  document.getElementById('selectSection').style.display = "none";
-  document.getElementById('mainApp').style.display = "block";
+  document.getElementById("selectSection").style.display = "none";
+  document.getElementById("mainApp").style.display = "block";
 
-  document.getElementById('currentMaster').textContent = master;
+  document.getElementById("currentMaster").textContent = master;
 
   initSelects();
 
   setTimeout(() => {
-    document.getElementById('employeeSelect').value = master;
-    document.getElementById('expenseEmployee').value = master;
+    document.getElementById("employeeSelect").value = master;
+    document.getElementById("expenseEmployee").value = master;
   }, 0);
-
-  document.querySelector('[data-page="checkin"]').click();
 }
 
-// ================= 登出 =================
-
-function logout() {
-
-  auth.signOut();
-
-  localStorage.clear();
-
-  location.reload();
-}
-
-// ================= Tabs =================
-
-document.querySelectorAll('.tabs button').forEach(btn => {
-
-  btn.addEventListener('click', () => {
-
-    document.querySelectorAll('.tabs button')
-      .forEach(b => b.classList.remove('active'));
-
-    document.querySelectorAll('.page')
-      .forEach(p => p.classList.remove('active'));
-
-    btn.classList.add('active');
-
-    document
-      .getElementById(btn.dataset.page)
-      .classList.add('active');
-  });
-});
-
-// ================= 上班 =================
-
-document.getElementById('btnIn')
-.addEventListener('click', async () => {
-
-  const master =
-    document.getElementById('employeeSelect').value;
-
-  const site =
-    document.getElementById('siteSelect').value;
-
-  const note =
-    document.getElementById('note').value;
-
-  if (!master || !site) {
-    alert("請選資料");
-    return;
-  }
-
-navigator.geolocation.getCurrentPosition(
-
-async pos => {
-    const userLat = pos.coords.latitude;
-    const userLng = pos.coords.longitude;
-
-    const siteData = siteLocations[site];
-
-    if (!siteData) {
-      alert("案場未設定 GPS");
-      return;
-    }
-
-    const distance = getDistance(
-      userLat,
-      userLng,
-      siteData.lat,
-      siteData.lng
-    );
-
-    const LIMIT = 250;
-
-    if (distance > LIMIT) {
-
-      alert(`❌ 不在案場範圍內（距離 ${Math.round(distance)} 公尺）`);
-
-      return;
-    }
-
-    const now = new Date();
-
-    const today = new Date();
-
-    today.setHours(0,0,0,0);
-
-    const check = await db.collection("checkins")
-      .where("master","==",master)
-   .where("isWorking","==",true)
-      .where("time",">=",today)
-      .get();
-
-    if (!check.empty) {
-
-      alert("今天已打過上班卡");
-
-      return;
-    }
-
-   await db.collection("checkins").add({
-  master,
-  site,
-  type: "in",
-  isWorking: true,
-  note,
-  lat: userLat,
-  lng: userLng,
-  time: now
-});
-
-    document.getElementById('checkinStatus').textContent =
-      "✅ 上班成功";
-
-  });
-},
-
-err => {
-
-  alert("無法取得 GPS 定位");
-
-}
-
-);
-
-// ================= 下班 =================
-
-document.getElementById('btnOut')
-.addEventListener('click', async () => {
-
-  const master =
-    document.getElementById('employeeSelect').value;
-
-  if (!master) {
-    alert("請選師傅");
-    return;
-  }
-
-  const snapshot = await db.collection("checkins")
-    .where("master","==",master)
-    .where("type","==","in")
-    .orderBy("time","desc")
-    .limit(1)
-    .get();
-
-  if (snapshot.empty) {
-
-    alert("找不到上班紀錄");
-
-    return;
-  }
-
-  const doc = snapshot.docs[0];
-
-  const data = doc.data();
-
-  const inTime = data.time.toDate();
-
-  const outTime = new Date();
-
- const hours =
-  ((outTime - inTime) / 3600000).toFixed(1);
-
-  await doc.ref.update({
-  outTime,
-  hours,
-  isWorking: false
-});;
-
-  await fetch(GAS_URL, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    master: data.master,
-    site: data.site,
-    hours: hours,
-    note: data.note || ""
-  })
-});
-  document.getElementById('checkinStatus').textContent =
-`✅ 下班成功
-工時：${hours} 小時`;
-
-});
-// ================= 上班中 =================
-
-async function loadWorking() {
-
-  const tbody =
-    document.getElementById("workingBody");
-
-  tbody.innerHTML = "";
-
-  const snapshot = await db.collection("checkins")
-    .orderBy("time", "desc")
-    .get();
-
-  snapshot.forEach(doc => {
-
-    const d = doc.data();
-
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${d.master || ""}</td>
-      <td>${d.site || ""}</td>
-      <td>${d.time ? d.time.toDate().toLocaleString() : ""}</td>
-      <td>${d.outTime ? d.outTime.toDate().toLocaleString() : "上班中"}</td>
-      <td>${d.note || ""}</td>
-    `;
-
-    tbody.appendChild(tr);
-
-  });
-
-}
-  // ================= 雜支 =================
-
-document.getElementById("btnExpense")
-.addEventListener("click", async () => {
-
-  const data = {
-    date: document.getElementById("expenseDate").value,
-    master: document.getElementById("expenseEmployee").value,
-    site: document.getElementById("expenseSite").value,
-    misc: Number(document.getElementById("misc").value),
-    meal: Number(document.getElementById("meal").value),
-    water: Number(document.getElementById("water").value),
-    note: document.getElementById("expenseNote").value,
-    createdAt: new Date()
-  };
-
-  await db.collection("expenses").add(data);
-
-  document.getElementById("expenseStatus").textContent =
-    "✅ 已送出";
-
-});
-// ================= Firebase 登入監聽 =================
+// ================= auth =================
 
 auth.onAuthStateChanged(user => {
 
   if (!user) {
     document.getElementById("loginSection").style.display = "block";
-    document.getElementById("selectSection").style.display = "none";
-    document.getElementById("mainApp").style.display = "none";
     return;
   }
 
   document.getElementById("loginSection").style.display = "none";
 
-  setTimeout(() => {
-    initSelects();
-  }, 0);
+  initSelects();
 
-  const savedMaster = localStorage.getItem("currentMaster");
+  const saved = localStorage.getItem("currentMaster");
 
-  if (savedMaster) {
-    showMain(savedMaster);
-  } else {
-    document.getElementById("selectSection").style.display = "block";
-  }
+  if (saved) showMain(saved);
+  else document.getElementById("selectSection").style.display = "block";
 });
-// ================= 按鈕事件 =================
 
-document
-  .getElementById("googleLoginBtn")
-  .addEventListener("click", loginWithGoogle);
+// ================= events =================
 
-document
-  .getElementById("saveSelectionBtn")
-  .addEventListener("click", saveSelection);
+document.getElementById("googleLoginBtn").addEventListener("click", loginWithGoogle);
+document.getElementById("saveSelectionBtn").addEventListener("click", saveSelection);
+document.getElementById("logoutBtn").addEventListener("click", () => auth.signOut());
+document.getElementById("btnRefreshWorking").addEventListener("click", loadWorking);
 
-document
-  .getElementById("logoutBtn")
-  .addEventListener("click", logout);
-document
-  .getElementById("btnRefreshWorking")
-  .addEventListener("click", loadWorking);});
+}); // ← DOMContentLoaded end
+
 </script>
 </body>
 </html>>
