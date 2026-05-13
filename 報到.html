@@ -332,7 +332,7 @@
 
   </div>
 </div>
-
+document.addEventListener("DOMContentLoaded", () => {
 <script>
 
 // ================= Firebase =================
@@ -412,14 +412,17 @@ function initSelects() {
   const expenseEmployee = document.getElementById('expenseEmployee');
   const expenseSite = document.getElementById('expenseSite');
 
+  if (!emp || !site || !master || !expenseEmployee || !expenseSite) {
+    console.error("DOM 尚未載入完成");
+    return;
+  }
+
   emp.innerHTML = "";
   site.innerHTML = "";
-
   expenseEmployee.innerHTML = "";
   expenseSite.innerHTML = "";
 
-  master.innerHTML =
-    '<option value="">-- 選擇師傅姓名 --</option>';
+  master.innerHTML = '<option value="">-- 選擇師傅姓名 --</option>';
 
   masters.forEach(m => {
 
@@ -437,9 +440,21 @@ function initSelects() {
     opt3.value = m;
     opt3.textContent = m;
     expenseEmployee.appendChild(opt3);
-
   });
 
+  todaySites.forEach(s => {
+
+    const opt1 = document.createElement('option');
+    opt1.value = s;
+    opt1.textContent = s;
+    site.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = s;
+    opt2.textContent = s;
+    expenseSite.appendChild(opt2);
+  });
+}
   todaySites.forEach(s => {
 
     const opt1 = document.createElement('option');
@@ -488,20 +503,19 @@ function saveSelection() {
 
 function showMain(master) {
 
-  document.getElementById("selectSection").style.display = "none";
+  document.getElementById('selectSection').style.display = "none";
+  document.getElementById('mainApp').style.display = "block";
 
-  document.getElementById("mainApp").style.display = "block";
-
-  document.getElementById("currentMaster").textContent = master;
+  document.getElementById('currentMaster').textContent = master;
 
   initSelects();
 
-  document.getElementById("employeeSelect").value = master;
-  document.getElementById("expenseEmployee").value = master;
+  setTimeout(() => {
+    document.getElementById('employeeSelect').value = master;
+    document.getElementById('expenseEmployee').value = master;
+  }, 0);
 
-  document
-    .querySelector('[data-page="checkin"]')
-    .click();
+  document.querySelector('[data-page="checkin"]').click();
 }
 
 // ================= 登出 =================
@@ -747,38 +761,26 @@ document.getElementById("btnExpense")
 auth.onAuthStateChanged(user => {
 
   if (!user) {
-
-    document.getElementById("loginSection").style.display =
-      "block";
-
-    document.getElementById("selectSection").style.display =
-      "none";
-
-    document.getElementById("mainApp").style.display =
-      "none";
-
+    document.getElementById("loginSection").style.display = "block";
+    document.getElementById("selectSection").style.display = "none";
+    document.getElementById("mainApp").style.display = "none";
     return;
   }
 
-  document.getElementById("loginSection").style.display =
-    "none";
+  document.getElementById("loginSection").style.display = "none";
 
-  initSelects();
+  setTimeout(() => {
+    initSelects();
+  }, 0);
 
-  const savedMaster =
-    localStorage.getItem("currentMaster");
+  const savedMaster = localStorage.getItem("currentMaster");
 
   if (savedMaster) {
-
     showMain(savedMaster);
-
   } else {
-
-    document.getElementById("selectSection").style.display =
-      "block";
+    document.getElementById("selectSection").style.display = "block";
   }
 });
-
 // ================= 按鈕事件 =================
 
 document
@@ -794,7 +796,7 @@ document
   .addEventListener("click", logout);
 document
   .getElementById("btnRefreshWorking")
-  .addEventListener("click", loadWorking);
+  .addEventListener("click", loadWorking);});
 </script>
 </body>
 </html>>
