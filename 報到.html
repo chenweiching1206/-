@@ -511,7 +511,41 @@ function showMain(master){
   document.getElementById("currentMaster").textContent =
     master;
 }
+function calculateWorkLabel(hours){
 
+  let baseSite = "";
+  let overtime = 0;
+  let halfDay = false;
+
+  if(hours <= 4){
+
+    // 🟡 半天
+    halfDay = true;
+    overtime = 0;
+
+  } 
+  else if(hours <= 9){
+
+    // 🟢 半天 + 加班
+    halfDay = true;
+    overtime = Math.floor(hours - 4);
+
+  } 
+  else {
+
+    // 🔵 整天 + 加班
+    halfDay = false;
+    baseSite = "整天";
+    overtime = Math.floor(hours - 9);
+
+  }
+
+  return {
+    halfDay,
+    overtime,
+    baseSite
+  };
+}
 // ================= 上班 =================
 
 document.getElementById("btnIn")
@@ -610,9 +644,8 @@ document.getElementById("btnOut")
 
   const outTime = new Date();
 
-  const hours =
-    ((outTime - data.time.toDate()) / 3600000).toFixed(1);
-
+  const calc = calculateWorkLabel(hours);
+const value = formatSite(data.site, calc);
   await doc.ref.update({
 
     outTime,
