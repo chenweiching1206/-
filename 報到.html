@@ -580,8 +580,11 @@ document.getElementById("btnIn")
         siteData.lat,
         siteData.lng
       );
+alert(`距離 ${Math.round(distance)}m`);
 
-      if(distance > 250){
+console.log("user:", userLat, userLng);
+console.log("site:", siteData);
+      if(distance > 800){
 
         alert(`❌ 不在案場範圍內 (${Math.round(distance)}m)`);
 
