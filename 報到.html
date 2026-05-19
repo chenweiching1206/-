@@ -326,7 +326,7 @@
 </div>
 
 <script>
-
+let CURRENT_MASTER = "";
 document.addEventListener("DOMContentLoaded", () => {
 
 // ================= Firebase =================
@@ -398,10 +398,34 @@ function loginWithGoogle() {
 
 // ================= save =================
 
-function saveSelection() {
-  const master = document.getElementById("masterSelect").value;
-  if (!master) return alert("選師傅");
-  localStorage.setItem("currentMaster", master);
+async function saveSelection() {
+
+  const master =
+    document.getElementById("masterSelect").value;
+
+  if (!master) {
+    alert("請選擇師傅");
+    return;
+  }
+
+  const user = auth.currentUser;
+
+  if (!user) {
+    alert("尚未登入");
+    return;
+  }
+
+  // 存到 Firestore
+  await db.collection("users").doc(user.uid).set({
+
+    email: user.email,
+    master: master,
+    createdAt: new Date()
+
+  });
+
+  CURRENT_MASTER = master;
+
   showMain(master);
 }
 
@@ -424,21 +448,45 @@ function showMain(master) {
 
 // ================= auth =================
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async user => {
 
   if (!user) {
+
     document.getElementById("loginSection").style.display = "block";
+
+    document.getElementById("mainApp").style.display = "none";
+
+    document.getElementById("selectSection").style.display = "none";
+
     return;
   }
 
   document.getElementById("loginSection").style.display = "none";
 
-  initSelects();
+  // 查 Firestore 是否已綁定
+  const doc = await db
+    .collection("users")
+    .doc(user.uid)
+    .get();
 
-  const saved = localStorage.getItem("currentMaster");
+  // 已綁定
+  if (doc.exists) {
 
-  if (saved) showMain(saved);
-  else document.getElementById("selectSection").style.display = "block";
+    const data = doc.data();
+
+    CURRENT_MASTER = data.master;
+
+    showMain(data.master);
+
+  } else {
+
+    // 第一次登入
+    document.getElementById("selectSection").style.display =
+      "block";
+
+    initSelects();
+  }
+
 });
 
 // ================= events =================
