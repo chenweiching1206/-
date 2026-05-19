@@ -783,13 +783,15 @@ auth.onAuthStateChanged(async user => {
     .doc(user.uid)
     .get();
 
-  if(doc.exists){
+ if(doc.exists){
 
-    const data = doc.data();
+  const data = doc.data();
+  CURRENT_MASTER = data.master;
 
-    CURRENT_MASTER = data.master;
+  showMain(data.master);
 
-    showMain(data.master);
+  initSelects(); // ⭐⭐⭐ 加這行
+
 
   }else{
 
