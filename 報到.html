@@ -671,15 +671,17 @@ else if(calc.half){
 
   // ✅ 5. 寫入 GAS
   await fetch(GAS_URL, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      master: data.master,
-      site: value,
-      hours
-    })
-  });
-
+  method: "POST",
+  mode: "no-cors",
+  headers: {
+    "Content-Type": "text/plain"
+  },
+  body: JSON.stringify({
+    master: data.master,
+    site: value,
+    hours
+  })
+});
   document.getElementById("checkinStatus").textContent =
   `✅ 下班成功\n工時：${hours.toFixed(1)} 小時\n狀態：${value}`;
 });
