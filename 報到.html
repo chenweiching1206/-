@@ -499,51 +499,27 @@ async function saveSelection(){
 }
 
 // ================= show =================
-
-function showMain(master){
-
-  document.getElementById("selectSection").style.display =
-    "none";
-
-  document.getElementById("mainApp").style.display =
-    "block";
-
-  document.getElementById("currentMaster").textContent =
-    master;
-}
 function calculateWorkLabel(hours){
 
-  let baseSite = "";
   let overtime = 0;
   let halfDay = false;
 
   if(hours <= 4){
-
-    // 🟡 半天
     halfDay = true;
     overtime = 0;
-
-  } 
+  }
   else if(hours <= 9){
-
-    // 🟢 半天 + 加班
     halfDay = true;
     overtime = Math.floor(hours - 4);
-
-  } 
+  }
   else {
-
-    // 🔵 整天 + 加班
     halfDay = false;
-    baseSite = "整天";
     overtime = Math.floor(hours - 9);
-
   }
 
   return {
     halfDay,
-    overtime,
-    baseSite
+    overtime
   };
 }
 // ================= 上班 =================
@@ -632,51 +608,48 @@ document.getElementById("btnOut")
     .get();
 
   if(snapshot.empty){
-
     alert("找不到上班紀錄");
-
     return;
   }
 
   const doc = snapshot.docs[0];
-
   const data = doc.data();
 
   const outTime = new Date();
 
-  const calc = calculateWorkLabel(hours);
-const value = formatSite(data.site, calc);
-  await doc.ref.update({
+  // ✅ 1. 算工時
+  const hours =
+    (outTime - data.time.toDate()) / 3600000;
 
+  // ✅ 2. 套規則
+  const calc = calculateWorkLabel(hours);
+
+  // ✅ 3. 產生 Sheet 字串
+  const value =
+    data.site +
+    (calc.halfDay ? "半" : "") +
+    (calc.overtime > 0 ? "+" + calc.overtime : "");
+
+  // ✅ 4. 更新 Firebase
+  await doc.ref.update({
     outTime,
     hours,
     isWorking:false
-
   });
 
+  // ✅ 5. 寫入 GAS
   await fetch(GAS_URL, {
-
     method:"POST",
-
-    headers:{
-      "Content-Type":"application/json"
-    },
-
-    body:JSON.stringify({
-
-      master:data.master,
-      site:data.site,
-      hours,
-      note:data.note || ""
-
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      master: data.master,
+      site: value,
+      hours
     })
-
   });
 
   document.getElementById("checkinStatus").textContent =
-`✅ 下班成功
-工時：${hours} 小時`;
-
+  `✅ 下班成功\n工時：${hours.toFixed(1)} 小時\n狀態：${value}`;
 });
 
 // ================= 上班中 =================
