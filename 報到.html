@@ -328,7 +328,26 @@
 </div>
 
 <script>
+function calculateWorkLabel(hours){
 
+  let half = false;
+  let full = false;
+  let overtime = 0;
+
+  if(hours <= 4){
+    half = true;
+  }
+  else if(hours < 9){
+    half = true;
+    overtime = Math.floor(hours - 4);
+  }
+  else{
+    full = true;
+    overtime = Math.floor(hours - 9);
+  }
+
+  return { half, full, overtime };
+}
 let CURRENT_MASTER = "";
 
 // ================= Firebase =================
@@ -497,7 +516,13 @@ async function saveSelection(){
 
   showMain(master);
 }
+function showMain(master){
 
+  document.getElementById("selectSection").style.display = "none";
+  document.getElementById("mainApp").style.display = "block";
+  document.getElementById("currentMaster").textContent = master;
+
+}
 // ================= show =================
 function calculateWorkLabel(hours){
 
@@ -617,19 +642,23 @@ document.getElementById("btnOut")
 
   const outTime = new Date();
 
-  // ✅ 1. 算工時
-  const hours =
-    (outTime - data.time.toDate()) / 3600000;
+const hours =
+  (outTime - data.time.toDate()) / 3600000;
 
-  // ✅ 2. 套規則
-  const calc = calculateWorkLabel(hours);
+// ⭐⭐⭐ 就貼在這裡
+const calc = calculateWorkLabel(hours);
 
-  // ✅ 3. 產生 Sheet 字串
-  const value =
-    data.site +
-    (calc.halfDay ? "半" : "") +
-    (calc.overtime > 0 ? "+" + calc.overtime : "");
+let value = data.site;
 
+if(calc.full){
+  value += "+" + calc.overtime;
+}
+else if(calc.half){
+  value += "半";
+  if(calc.overtime > 0){
+    value += "+" + calc.overtime;
+  }
+}
   // ✅ 4. 更新 Firebase
   await doc.ref.update({
     outTime,
