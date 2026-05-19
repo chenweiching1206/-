@@ -722,29 +722,34 @@ async function loadWorking(){
 document.getElementById("btnExpense")
 .addEventListener("click", async () => {
 
+  const lastSite = await db.collection("checkins")
+    .where("master", "==", CURRENT_MASTER)
+    .orderBy("time", "desc")
+    .limit(1)
+    .get();
+
+  let site = "";
+
+  if(!lastSite.empty){
+    site = lastSite.docs[0].data().site;
+  }
+
   await db.collection("expenses").add({
 
-    master:CURRENT_MASTER,
-    const lastSite = await db.collection("checkins")
-  .where("master","==",CURRENT_MASTER)
-  .orderBy("time","desc")
-  .limit(1)
-  .get();
-    site: lastSite.docs[0].data().site
-    date:document.getElementById("expenseDate").value,
-    misc:Number(document.getElementById("misc").value),
-    meal:Number(document.getElementById("meal").value),
-    water:Number(document.getElementById("water").value),
-    note:document.getElementById("expenseNote").value,
-    createdAt:new Date()
+    master: CURRENT_MASTER,
+    site: site,   // ⭐這裡才是正確用法
+    date: document.getElementById("expenseDate").value,
+    misc: Number(document.getElementById("misc").value),
+    meal: Number(document.getElementById("meal").value),
+    water: Number(document.getElementById("water").value),
+    note: document.getElementById("expenseNote").value,
+    createdAt: new Date()
 
   });
 
   document.getElementById("expenseStatus").textContent =
     "✅ 已送出";
-
 });
-
 // ================= tabs =================
 
 document.querySelectorAll(".tabs button")
