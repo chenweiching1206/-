@@ -367,6 +367,13 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 auth.languageCode = "zh-TW";
+auth.getRedirectResult().then(result => {
+  if (result.user) {
+    console.log("登入成功", result.user);
+  }
+}).catch(err => {
+  console.log(err);
+});
 auth.getRedirectResult().then(result => { if (result.user) { console.log("登入成功", result.user); } });
 // ================= GAS =================
 
@@ -479,15 +486,12 @@ function initSelects(){
 // ================= login =================
 
 function loginWithGoogle(){
-
   const provider = new firebase.auth.GoogleAuthProvider();
 
- auth.signInWithRedirect(provider);
-    .catch(err => {
-      alert("登入失敗：" + err.message);
-    });
+  auth.signInWithRedirect(provider).catch(err => {
+    alert("登入失敗：" + err.message);
+  });
 }
-
 // ================= save =================
 
 async function saveSelection(){
@@ -670,9 +674,12 @@ else if(calc.half){
   });
 
   // ✅ 5. 寫入 GAS
-  await fetch(GAS_URL, {
+ await fetch(GAS_URL, {
   method: "POST",
   mode: "no-cors",
+  headers: {
+    "Content-Type": "text/plain"
+  },
   body: JSON.stringify({
     master: data.master,
     site: value,
