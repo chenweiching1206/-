@@ -725,7 +725,12 @@ document.getElementById("btnExpense")
   await db.collection("expenses").add({
 
     master:CURRENT_MASTER,
-    site: document.getElementById("siteSelect").value
+    const lastSite = await db.collection("checkins")
+  .where("master","==",CURRENT_MASTER)
+  .orderBy("time","desc")
+  .limit(1)
+  .get();
+    site: lastSite.docs[0].data().site
     date:document.getElementById("expenseDate").value,
     misc:Number(document.getElementById("misc").value),
     meal:Number(document.getElementById("meal").value),
