@@ -328,27 +328,7 @@
 </div>
 
 <script>
-function calculateWorkLabel(hours){
 
-  let half = false;
-  let full = false;
-  let overtime = 0;
-
-  if(hours <= 4){
-    half = true;
-  }
-  else if(hours < 9){
-    half = true;
-    overtime = Math.floor(hours - 4);
-  }
-  else{
-    full = true;
-    overtime = Math.floor(hours - 9);
-  }
-
-  return { half, full, overtime };
-}
-let CURRENT_MASTER = "";
 
 // ================= Firebase =================
 
