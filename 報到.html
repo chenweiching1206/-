@@ -328,7 +328,7 @@
 </div>
 
 <script>
-
+let isProcessing = false;
 
 // ================= Firebase =================
 
@@ -536,72 +536,93 @@ function calculateWorkLabel(hours){
 document.getElementById("btnIn")
 .addEventListener("click", async () => {
 
-  const master = CURRENT_MASTER;
+  // 🚨 防連點鎖
+  if (isProcessing) return;
+  isProcessing = true;
 
-  const site =
-    document.getElementById("siteSelect").value;
+  const btnIn = document.getElementById("btnIn");
+  btnIn.disabled = true;
+  btnIn.innerText = "處理中...";
 
-  const note =
-    document.getElementById("note").value;
+  try {
 
-  if(!site){
-    alert("請選案場");
-    return;
-  }
+    const master = CURRENT_MASTER;
 
-  navigator.geolocation.getCurrentPosition(
+    const site = document.getElementById("siteSelect").value;
+    const note = document.getElementById("note").value;
 
-    async pos => {
-
-      const userLat = pos.coords.latitude;
-      const userLng = pos.coords.longitude;
-
-      const siteData = siteLocations[site];
-
-      const distance = getDistance(
-        userLat,
-        userLng,
-        siteData.lat,
-        siteData.lng
-      );
-alert(`距離 ${Math.round(distance)}m`);
-
-console.log("user:", userLat, userLng);
-console.log("site:", siteData);
-      if(distance > 800){
-
-        alert(`❌ 不在案場範圍內 (${Math.round(distance)}m)`);
-
-        return;
-      }
-
-      const now = new Date();
-
-      await db.collection("checkins").add({
-
-        master,
-        site,
-        note,
-        type:"in",
-        isWorking:true,
-        lat:userLat,
-        lng:userLng,
-        time:now
-
-      });
-
-      document.getElementById("checkinStatus").textContent =
-        "✅ 上班成功";
-
-    },
-
-    err => {
-
-      alert("GPS 取得失敗");
-
+    if (!site) {
+      alert("請選案場");
+      return;
     }
 
-  );
+    // 🔴 防呆：已經在上班中就不能再打
+    const snapshot = await db.collection("checkins")
+      .where("master", "==", master)
+      .where("isWorking", "==", true)
+      .limit(1)
+      .get();
+
+    if (!snapshot.empty) {
+      alert("你已經在上班中，不能重複打卡");
+      return;
+    }
+
+    // 📍 GPS 定位
+    navigator.geolocation.getCurrentPosition(
+      async pos => {
+
+        const userLat = pos.coords.latitude;
+        const userLng = pos.coords.longitude;
+
+        const siteData = siteLocations[site];
+
+        const distance = getDistance(
+          userLat,
+          userLng,
+          siteData.lat,
+          siteData.lng
+        );
+
+        if (distance > 800) {
+          alert(`❌ 不在案場範圍內 (${Math.round(distance)}m)`);
+          return;
+        }
+
+        const now = new Date();
+
+        await db.collection("checkins").add({
+          master,
+          site,
+          note,
+          type: "in",
+          isWorking: true,
+          lat: userLat,
+          lng: userLng,
+          time: now
+        });
+
+        document.getElementById("checkinStatus").textContent =
+          "✅ 上班成功";
+
+      },
+      err => {
+        alert("GPS 取得失敗");
+      }
+    );
+
+  } catch (err) {
+    console.error(err);
+    alert("上班失敗，請稍後再試");
+
+  } finally {
+
+    // 🔓 解鎖 + UI還原
+    isProcessing = false;
+
+    btnIn.disabled = false;
+    btnIn.innerText = "上班報到";
+  }
 
 });
 
@@ -610,72 +631,90 @@ console.log("site:", siteData);
 document.getElementById("btnOut")
 .addEventListener("click", async () => {
 
-  const master = CURRENT_MASTER;
+  if (isProcessing) return;
+  isProcessing = true;
 
-  const snapshot = await db.collection("checkins")
-    .where("master","==",master)
-    .where("isWorking","==",true)
-    .orderBy("time","desc")
-    .limit(1)
-    .get();
+  const btnOut = document.getElementById("btnOut");
+  btnOut.disabled = true;
+  btnOut.innerText = "處理中...";
 
-  if(snapshot.empty){
-    alert("找不到上班紀錄");
-    return;
+  try {
+
+    const master = CURRENT_MASTER;
+
+    const snapshot = await db.collection("checkins")
+      .where("master", "==", master)
+      .where("isWorking", "==", true)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      alert("你目前沒有上班紀錄");
+      return;
+    }
+
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+
+    const outTime = new Date();
+
+    const hours =
+      (outTime - data.time.toDate()) / 3600000;
+
+    const calc = calculateWorkLabel(hours);
+
+    let value = data.site;
+
+    if (calc.full) {
+      value += "+" + calc.overtime;
+    } else if (calc.half) {
+      value += "半";
+      if (calc.overtime > 0) {
+        value += "+" + calc.overtime;
+      }
+    }
+
+    await doc.ref.update({
+      outTime,
+      hours,
+      isWorking: false
+    });
+
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      mode: "cors",
+      headers: {
+        "Content-Type": "text/plain"
+      },
+      body: JSON.stringify({
+        master: data.master,
+        site: value,
+        hours
+      })
+    });
+
+    const result = await res.json();
+    console.log(result);
+
+    alert("下班成功");
+
+    document.getElementById("checkinStatus").textContent =
+      `✅ 下班成功\n工時：${hours.toFixed(1)} 小時\n狀態：${value}`;
+
+  } catch (err) {
+    console.error(err);
+    alert("下班失敗，請稍後再試");
+
+  } finally {
+
+    // 🔓 永遠保證解鎖（關鍵修正）
+    isProcessing = false;
+
+    btnOut.disabled = false;
+    btnOut.innerText = "下班報到";
   }
 
-  const doc = snapshot.docs[0];
-  const data = doc.data();
-
-  const outTime = new Date();
-
-const hours =
-  (outTime - data.time.toDate()) / 3600000;
-
-// ⭐⭐⭐ 就貼在這裡
-const calc = calculateWorkLabel(hours);
-
-let value = data.site;
-
-if(calc.full){
-  value += "+" + calc.overtime;
-}
-else if(calc.half){
-  value += "半";
-  if(calc.overtime > 0){
-    value += "+" + calc.overtime;
-  }
-}
-  // ✅ 4. 更新 Firebase
-  await doc.ref.update({
-    outTime,
-    hours,
-    isWorking:false
-  });
-
-  // ✅ 5. 寫入 GAS
- const res = await fetch(GAS_URL, {
-  method: "POST",
-  mode: "cors",
-  headers: {
-    "Content-Type": "text/plain"
-  },
-  body: JSON.stringify({
-    master: data.master,
-    site: value,
-    hours
-  })
 });
-
-const result = await res.json();
-
-console.log(result);
-
-alert(JSON.stringify(result));
-  document.getElementById("checkinStatus").textContent =
-  `✅ 下班成功\n工時：${hours.toFixed(1)} 小時\n狀態：${value}`;
-});
-
 // ================= 上班中 =================
 
 async function loadWorking(){
