@@ -547,6 +547,7 @@ document.getElementById("btnIn")
 
     const master = CURRENT_MASTER;
     const site = document.getElementById("siteSelect").value;
+    const note = document.getElementById("note").value;
 
     if (!site) {
       alert("請選案場");
@@ -555,25 +556,49 @@ document.getElementById("btnIn")
 
     const today = new Date().toISOString().slice(0, 10);
     const docId = `${today}_${master}`;
-
     const docRef = db.collection("checkins").doc(docId);
+
     const doc = await docRef.get();
 
+    // ✅ 核心：已存在就直接鎖死（不允許第二次）
     if (doc.exists && doc.data().isWorking) {
-      alert("今天已經打過上班卡");
+      alert("今天已經上班中，不能重複打卡");
       return;
     }
 
-    await docRef.set({
-      master,
-      site,
-      date: today,
-      time: new Date(),
-      isWorking: true
-    }, { merge: true });
+    // 📍 GPS
+    navigator.geolocation.getCurrentPosition(async pos => {
 
-    document.getElementById("checkinStatus").textContent =
-      "✅ 上班成功";
+      const userLat = pos.coords.latitude;
+      const userLng = pos.coords.longitude;
+
+      const siteData = siteLocations[site];
+
+      const distance = getDistance(
+        userLat,
+        userLng,
+        siteData.lat,
+        siteData.lng
+      );
+
+      if (distance > 800) {
+        alert("不在案場範圍");
+        return;
+      }
+
+      await docRef.set({
+        master,
+        site,
+        note,
+        date: today,
+        time: new Date(),
+        isWorking: true
+      }, { merge: true });
+
+      document.getElementById("checkinStatus").textContent =
+        "✅ 上班成功";
+
+    });
 
   } catch (err) {
     console.error(err);
