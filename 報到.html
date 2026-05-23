@@ -536,7 +536,6 @@ function calculateWorkLabel(hours){
 document.getElementById("btnIn")
 .addEventListener("click", async () => {
 
-  // 🚨 防連點鎖
   if (isProcessing) return;
   isProcessing = true;
 
@@ -545,125 +544,48 @@ document.getElementById("btnIn")
   btnIn.innerText = "處理中...";
 
   try {
-const today = new Date().toISOString().slice(0, 10);
-const docId = `${today}_${CURRENT_MASTER}`;
 
-const doc = await db.collection("checkins").doc(docId).get();
-
-if (doc.exists && doc.data().isWorking) {
-  alert("你今天已經打過上班卡");
-  return;
-}
     const master = CURRENT_MASTER;
-
     const site = document.getElementById("siteSelect").value;
-   const today = new Date().toISOString().slice(0, 10);
-const docId = `${today}_${master}`;
-    const note = document.getElementById("note").value;
 
     if (!site) {
       alert("請選案場");
       return;
     }
 
-    // 🔴 防呆：已經在上班中就不能再打
-    const snapshot = await db.collection("checkins")
-      const today = new Date().toISOString().slice(0, 10);
-const docId = `${today}_${master}`;
-
-const docRef = db.collection("checkins").doc(docId);
-const doc = await docRef.get();
-
-if (!doc.exists) {
-  alert("今天沒有上班紀錄");
-  return;
-}
-
-const data = doc.data();
-      .where("isWorking", "==", true)
-      .limit(1)
-      .get();
-const outTime = new Date();
-const hours = (outTime - data.time.toDate()) / 3600000;
-
-await docRef.update({
-  outTime,
-  hours,
-  isWorking: false
-});
     const today = new Date().toISOString().slice(0, 10);
+    const docId = `${today}_${master}`;
 
-const snapshot = await db.collection("checkins")
-  .where("date", "==", today)
-  .orderBy("time", "desc")
-  .get();
-    if (!snapshot.empty) {
-      alert("你已經在上班中，不能重複打卡");
+    const docRef = db.collection("checkins").doc(docId);
+    const doc = await docRef.get();
+
+    if (doc.exists && doc.data().isWorking) {
+      alert("今天已經打過上班卡");
       return;
     }
 
-    // 📍 GPS 定位
-    navigator.geolocation.getCurrentPosition(
-      async pos => {
+    await docRef.set({
+      master,
+      site,
+      date: today,
+      time: new Date(),
+      isWorking: true
+    }, { merge: true });
 
-        const userLat = pos.coords.latitude;
-        const userLng = pos.coords.longitude;
-
-        const siteData = siteLocations[site];
-
-        const distance = getDistance(
-          userLat,
-          userLng,
-          siteData.lat,
-          siteData.lng
-        );
-
-        if (distance > 800) {
-          alert(`❌ 不在案場範圍內 (${Math.round(distance)}m)`);
-          return;
-        }
-
-        const now = new Date();
-
-       const today = new Date().toISOString().slice(0, 10); // 2026-05-23
-const docId = `${today}_${master}`;
-
-const today = new Date().toISOString().slice(0, 10);
-const docId = `${today}_${master}`;
-
-await db.collection("checkins")
-  .doc(docId)
-  .set({
-    master,
-    site,
-    date: today,
-    time: new Date(),
-    isWorking: true
-  }, { merge: true });
-        document.getElementById("checkinStatus").textContent =
-          "✅ 上班成功";
-
-      },
-      err => {
-        alert("GPS 取得失敗");
-      }
-    );
+    document.getElementById("checkinStatus").textContent =
+      "✅ 上班成功";
 
   } catch (err) {
     console.error(err);
-    alert("上班失敗，請稍後再試");
+    alert("上班失敗");
 
   } finally {
-
-    // 🔓 解鎖 + UI還原
     isProcessing = false;
-
     btnIn.disabled = false;
     btnIn.innerText = "上班報到";
   }
 
 });
-
 // ================= 下班 =================
 
 document.getElementById("btnOut")
@@ -679,6 +601,7 @@ document.getElementById("btnOut")
   try {
 
     const master = CURRENT_MASTER;
+
     const today = new Date().toISOString().slice(0, 10);
     const docId = `${today}_${master}`;
 
