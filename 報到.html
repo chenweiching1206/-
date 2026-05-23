@@ -545,10 +545,20 @@ document.getElementById("btnIn")
   btnIn.innerText = "處理中...";
 
   try {
+const today = new Date().toISOString().slice(0, 10);
+const docId = `${today}_${CURRENT_MASTER}`;
 
+const doc = await db.collection("checkins").doc(docId).get();
+
+if (doc.exists && doc.data().isWorking) {
+  alert("你今天已經打過上班卡");
+  return;
+}
     const master = CURRENT_MASTER;
 
     const site = document.getElementById("siteSelect").value;
+   const today = new Date().toISOString().slice(0, 10);
+const docId = `${today}_${master}`;
     const note = document.getElementById("note").value;
 
     if (!site) {
@@ -669,90 +679,38 @@ document.getElementById("btnOut")
   try {
 
     const master = CURRENT_MASTER;
+    const today = new Date().toISOString().slice(0, 10);
+    const docId = `${today}_${master}`;
 
-    const snapshot = await db.collection("checkins")
-     const today = new Date().toISOString().slice(0, 10);
-const docId = `${today}_${master}`;
+    const docRef = db.collection("checkins").doc(docId);
+    const doc = await docRef.get();
 
-const docRef = db.collection("checkins").doc(docId);
-const doc = await docRef.get();
-
-if (!doc.exists) {
-  alert("今天沒有上班紀錄");
-  return;
-}
-
-const data = doc.data();
-    await docRef.update({
-  outTime,
-  hours,
-  isWorking: false
-});
-      .limit(1)
-      .get();
-
-    if (snapshot.empty) {
-      alert("你目前沒有上班紀錄");
+    if (!doc.exists) {
+      alert("今天沒有上班紀錄");
       return;
     }
 
-    const doc = snapshot.docs[0];
     const data = doc.data();
-
     const outTime = new Date();
 
     const hours =
       (outTime - data.time.toDate()) / 3600000;
 
-    const calc = calculateWorkLabel(hours);
-
-    let value = data.site;
-
-    if (calc.full) {
-      value += "+" + calc.overtime;
-    } else if (calc.half) {
-      value += "半";
-      if (calc.overtime > 0) {
-        value += "+" + calc.overtime;
-      }
-    }
-
-    await doc.ref.update({
+    await docRef.update({
       outTime,
       hours,
       isWorking: false
     });
 
-    const res = await fetch(GAS_URL, {
-      method: "POST",
-      mode: "cors",
-      headers: {
-        "Content-Type": "text/plain"
-      },
-      body: JSON.stringify({
-        master: data.master,
-        site: value,
-        hours
-      })
-    });
-
-    const result = await res.json();
-    console.log(result);
-
-    alert("下班成功");
-
     document.getElementById("checkinStatus").textContent =
-      `✅ 下班成功\n工時：${hours.toFixed(1)} 小時\n狀態：${value}`;
+      `✅ 下班成功\n工時：${hours.toFixed(1)} 小時`;
 
   } catch (err) {
     console.error(err);
-    alert("下班失敗，請稍後再試");
+    alert("下班失敗");
 
   } finally {
-
-    // 🔓 永遠保證解鎖（關鍵修正）
     isProcessing = false;
-
     btnOut.disabled = false;
     btnOut.innerText = "下班報到";
   }
