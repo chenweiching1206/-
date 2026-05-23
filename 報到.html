@@ -681,6 +681,8 @@ async function loadWorking(){
   const snapshot = await db.collection("checkins")
     const today = new Date().toISOString().slice(0, 10);
 
+
+
 const snapshot = await db.collection("checkins")
   .where("date", "==", today)
   .orderBy("time", "desc")
