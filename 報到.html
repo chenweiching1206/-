@@ -678,17 +678,41 @@ async function loadWorking(){
   today.setHours(0,0,0,0);
 
   // 只抓今天 + 上班中
-  const snapshot = await db.collection("checkins")
-    const today = new Date().toISOString().slice(0, 10);
+ async function loadWorking() {
 
+  const tbody = document.getElementById("workingBody");
+  tbody.innerHTML = "";
 
+  const today = new Date().toISOString().slice(0, 10);
 
-const snapshot = await db.collection("checkins")
-  .where("date", "==", today)
-  .orderBy("time", "desc")
-  .get();
-    .orderBy("time", "desc")
-    .get();
+  try {
+
+    const snapshot = await db.collection("checkins")
+      .where("date", "==", today)
+      .orderBy("time", "desc")
+      .get();
+
+    snapshot.forEach(doc => {
+
+      const d = doc.data();
+
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${d.master || ""}</td>
+        <td>${d.site || ""}</td>
+        <td>${d.time ? d.time.toDate().toLocaleString() : ""}</td>
+        <td>${d.isWorking ? "上班中" : "已下班"}</td>
+        <td>${d.note || ""}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+  } catch (err) {
+    console.error(err);
+  }
+}
 
   snapshot.forEach(doc => {
 
@@ -755,10 +779,25 @@ document.querySelectorAll(".tabs button")
     document.querySelectorAll(".page")
       .forEach(p => p.classList.remove("active"));
 
-    btn.classList.doc(master).set("active");
+   document.querySelectorAll(".tabs button")
+.forEach(btn => {
+
+  btn.addEventListener("click", () => {
+
+    document.querySelectorAll(".tabs button")
+      .forEach(b => b.classList.remove("active"));
+
+    document.querySelectorAll(".page")
+      .forEach(p => p.classList.remove("active"));
+
+    btn.classList.add("active");
 
     document.getElementById(btn.dataset.page)
-      .classList.doc(master).set("active");
+      .classList.add("active");
+
+  });
+
+});
 
   });
 
