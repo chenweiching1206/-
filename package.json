@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "node index.js"
+  }
+}
+{
   "name": "shifu-checkin",
   "version": "1.0.0",
   "description": "工地師傅 GPS 打卡系統（Firebase Functions + Google Sheet）",
