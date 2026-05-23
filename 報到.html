@@ -558,11 +558,35 @@ document.getElementById("btnIn")
 
     // 🔴 防呆：已經在上班中就不能再打
     const snapshot = await db.collection("checkins")
-      .where("master", "==", master)
+      const today = new Date().toISOString().slice(0, 10);
+const docId = `${today}_${master}`;
+
+const docRef = db.collection("checkins").doc(docId);
+const doc = await docRef.get();
+
+if (!doc.exists) {
+  alert("今天沒有上班紀錄");
+  return;
+}
+
+const data = doc.data();
       .where("isWorking", "==", true)
       .limit(1)
       .get();
+const outTime = new Date();
+const hours = (outTime - data.time.toDate()) / 3600000;
 
+await docRef.update({
+  outTime,
+  hours,
+  isWorking: false
+});
+    const today = new Date().toISOString().slice(0, 10);
+
+const snapshot = await db.collection("checkins")
+  .where("date", "==", today)
+  .orderBy("time", "desc")
+  .get();
     if (!snapshot.empty) {
       alert("你已經在上班中，不能重複打卡");
       return;
@@ -591,15 +615,21 @@ document.getElementById("btnIn")
 
         const now = new Date();
 
-        await db.collection("checkins")
-  .doc(master)
+       const today = new Date().toISOString().slice(0, 10); // 2026-05-23
+const docId = `${today}_${master}`;
+
+const today = new Date().toISOString().slice(0, 10);
+const docId = `${today}_${master}`;
+
+await db.collection("checkins")
+  .doc(docId)
   .set({
     master,
     site,
+    date: today,
     time: new Date(),
     isWorking: true
-  });
-
+  }, { merge: true });
         document.getElementById("checkinStatus").textContent =
           "✅ 上班成功";
 
@@ -641,8 +671,23 @@ document.getElementById("btnOut")
     const master = CURRENT_MASTER;
 
     const snapshot = await db.collection("checkins")
-      .where("master", "==", master)
-      .where("isWorking", "==", true)
+     const today = new Date().toISOString().slice(0, 10);
+const docId = `${today}_${master}`;
+
+const docRef = db.collection("checkins").doc(docId);
+const doc = await docRef.get();
+
+if (!doc.exists) {
+  alert("今天沒有上班紀錄");
+  return;
+}
+
+const data = doc.data();
+    await docRef.update({
+  outTime,
+  hours,
+  isWorking: false
+});
       .limit(1)
       .get();
 
@@ -728,8 +773,12 @@ async function loadWorking(){
 
   // 只抓今天 + 上班中
   const snapshot = await db.collection("checkins")
-    .where("isWorking", "==", true)
-    .where("time", ">=", today)
+    const today = new Date().toISOString().slice(0, 10);
+
+const snapshot = await db.collection("checkins")
+  .where("date", "==", today)
+  .orderBy("time", "desc")
+  .get();
     .orderBy("time", "desc")
     .get();
 
