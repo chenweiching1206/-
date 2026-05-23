@@ -722,8 +722,15 @@ async function loadWorking(){
 
   tbody.innerHTML = "";
 
+  // 今天日期
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // 只抓今天 + 上班中
   const snapshot = await db.collection("checkins")
-    .orderBy("time","desc")
+    .where("isWorking", "==", true)
+    .where("time", ">=", today)
+    .orderBy("time", "desc")
     .get();
 
   snapshot.forEach(doc => {
@@ -736,7 +743,7 @@ async function loadWorking(){
       <td>${d.master || ""}</td>
       <td>${d.site || ""}</td>
       <td>${d.time ? d.time.toDate().toLocaleString() : ""}</td>
-      <td>${d.outTime ? d.outTime.toDate().toLocaleString() : "上班中"}</td>
+      <td>上班中</td>
       <td>${d.note || ""}</td>
     `;
 
@@ -745,7 +752,6 @@ async function loadWorking(){
   });
 
 }
-
 // ================= 雜支 =================
 
 document.getElementById("btnExpense")
