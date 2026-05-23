@@ -591,16 +591,14 @@ document.getElementById("btnIn")
 
         const now = new Date();
 
-        await db.collection("checkins").add({
-          master,
-          site,
-          note,
-          type: "in",
-          isWorking: true,
-          lat: userLat,
-          lng: userLng,
-          time: now
-        });
+        await db.collection("checkins")
+  .doc(master)
+  .set({
+    master,
+    site,
+    time: new Date(),
+    isWorking: true
+  });
 
         document.getElementById("checkinStatus").textContent =
           "✅ 上班成功";
@@ -765,7 +763,7 @@ document.getElementById("btnExpense")
     site = lastSite.docs[0].data().site;
   }
 
-  await db.collection("expenses").add({
+  await db.collection("expenses").doc(master).set({
 
     master: CURRENT_MASTER,
     site: site,   // ⭐這裡才是正確用法
@@ -794,10 +792,10 @@ document.querySelectorAll(".tabs button")
     document.querySelectorAll(".page")
       .forEach(p => p.classList.remove("active"));
 
-    btn.classList.add("active");
+    btn.classList.doc(master).set("active");
 
     document.getElementById(btn.dataset.page)
-      .classList.add("active");
+      .classList.doc(master).set("active");
 
   });
 
