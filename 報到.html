@@ -360,8 +360,6 @@ auth.getRedirectResult().then(result => {
 auth.getRedirectResult().then(result => { if (result.user) { console.log("登入成功", result.user); } });
 // ================= GAS =================
 
-const GAS_URL =
-"https://script.google.com/macros/s/AKfycbwkn3kWIjPK0f0R6nm2F0OD_tbcd6Agyr9oadrY3Dp7puu-Pv6f7z-SSOliMyuDmMVA/exec";
 
 // ================= GPS =================
 
@@ -672,9 +670,7 @@ document.getElementById("btnOut")
 
 async function loadWorking() {
 
-  const tbody =
-    document.getElementById("workingBody");
-
+  const tbody = document.getElementById("workingBody");
   tbody.innerHTML = "";
 
   const today = new Date().toISOString().slice(0, 10);
@@ -701,16 +697,13 @@ async function loadWorking() {
       `;
 
       tbody.appendChild(tr);
-
     });
 
   } catch (err) {
-
-    console.error(err);
-
+    console.error("loadWorking error:", err);
+    alert("載入清單失敗：" + err.message);
   }
 }
-```
 
 // ================= 雜支 =================
 
