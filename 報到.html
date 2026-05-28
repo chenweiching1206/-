@@ -330,6 +330,9 @@
 <script>
 let isProcessing = false;
 
+let CURRENT_MASTER = "";
+
+
 // ================= Firebase =================
 
 const firebaseConfig = {
@@ -664,23 +667,14 @@ document.getElementById("btnOut")
   }
 
 });
+```js
 // ================= 上班中 =================
 
-async function loadWorking(){
+async function loadWorking() {
 
   const tbody =
     document.getElementById("workingBody");
 
-  tbody.innerHTML = "";
-
-  // 今天日期
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  // 只抓今天 + 上班中
- async function loadWorking() {
-
-  const tbody = document.getElementById("workingBody");
   tbody.innerHTML = "";
 
   const today = new Date().toISOString().slice(0, 10);
@@ -707,32 +701,17 @@ async function loadWorking(){
       `;
 
       tbody.appendChild(tr);
+
     });
 
   } catch (err) {
+
     console.error(err);
+
   }
 }
+```
 
-  snapshot.forEach(doc => {
-
-    const d = doc.data();
-
-    const tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${d.master || ""}</td>
-      <td>${d.site || ""}</td>
-      <td>${d.time ? d.time.toDate().toLocaleString() : ""}</td>
-      <td>上班中</td>
-      <td>${d.note || ""}</td>
-    `;
-
-    tbody.appendChild(tr);
-
-  });
-
-}
 // ================= 雜支 =================
 
 document.getElementById("btnExpense")
@@ -750,7 +729,12 @@ document.getElementById("btnExpense")
     site = lastSite.docs[0].data().site;
   }
 
-  await db.collection("expenses").doc(master).set({
+
+await db.collection("expenses")
+  .doc(CURRENT_MASTER)
+  .set({
+
+
 
     master: CURRENT_MASTER,
     site: site,   // ⭐這裡才是正確用法
